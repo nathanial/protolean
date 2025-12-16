@@ -4,6 +4,7 @@
 import Tests.Varint
 import Tests.Scalar
 import Tests.Parser
+import Tests.Import
 
 def main : IO Unit := do
   IO.println "Running Protolean tests..."
@@ -22,6 +23,11 @@ def main : IO Unit := do
   -- Parser tests
   IO.println "=== Parser Tests ==="
   Tests.Parser.runTests
+  IO.println ""
+
+  -- Import tests
+  IO.println "=== Import Tests ==="
+  Tests.Import.runTests
   IO.println ""
 
   IO.println "All tests completed!"

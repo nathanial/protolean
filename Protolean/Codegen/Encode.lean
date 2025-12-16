@@ -8,6 +8,7 @@ import Lean
 import Protolean.Syntax.AST
 import Protolean.Codegen.Names
 import Protolean.Codegen.Types
+import Protolean.Codegen.Decode
 
 namespace Protolean.Codegen
 
@@ -66,13 +67,15 @@ def generateEncodeInstanceStr (ctx : CodegenContext) (msg : MessageDef) : String
   let encodeBody := if fieldEncodes.isEmpty then "pure ()"
                     else "; ".intercalate fieldEncodes
 
+  -- Generate decode arms for each field
+  let decodeBody := generateDecodeFieldStr ctx msg
+
   s!"instance : Protolean.ProtoMessage {typeName} where
   encodeFields msg := do
     {encodeBody}
-  decodeField msg tag := do
-    Protolean.Decoder.skipField tag.wireType
-    pure msg
-  default := default"
+  decodeField msg tag := match tag with
+    {decodeBody}
+  defaultValue := default"
 
 /-- Generate and log encode instance for a message -/
 def elaborateEncodeInstance (ctx : CodegenContext) (msg : MessageDef) : CommandElabM Unit := do

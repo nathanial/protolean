@@ -4,11 +4,11 @@
   Usage:
     proto_import "path/to/file.proto"
 
-  This reads the proto file at compile time and generates Lean code.
-  Currently it logs the generated code which can be copy-pasted into
-  a Lean file. Full elaboration support is in progress.
+  This reads the proto file at compile time and generates Lean types
+  and instances for the protobuf definitions.
 -/
 import Lean
+import Lean.Parser
 import Protolean.Parser.Proto
 import Protolean.Import.Loader
 import Protolean.Codegen.Types
@@ -23,6 +23,16 @@ open Lean.Elab.Command
 open Protolean.Syntax
 open Protolean.Parser
 open Protolean.Import
+
+/-- Parse a Lean command from a string and elaborate it -/
+def elaborateCodeString (code : String) : CommandElabM Unit := do
+  let env ← getEnv
+  let fileName ← getFileName
+  -- Use runParserCategory to parse a command
+  let stx ← match Lean.Parser.runParserCategory env `command code fileName with
+    | .ok stx => pure stx
+    | .error msg => throwError "Parse error in generated code: {msg}\n\nGenerated code:\n{code}"
+  elabCommand stx
 
 /-- Register the proto_import syntax -/
 syntax (name := protoImport) "proto_import" str : command
@@ -60,29 +70,28 @@ def elabProtoImport : CommandElab := fun stx => do
       registry := {}
     }
 
-    -- Log all generated code
-    logInfo s!"=== Generated code for {pathStr} ==="
-
-    -- Add namespace if present
+    -- Elaborate namespace if present
     if let some pkg := protoFile.package then
-      logInfo s!"namespace {protoFullNameToLeanString pkg.parts}"
+      elaborateCodeString s!"namespace {protoFullNameToLeanString pkg.parts}"
 
-    -- Generate enums first
+    -- Generate and elaborate enums first
     for def_ in protoFile.definitions do
       if let .enum e := def_ then
-        logInfo s!"\n{generateEnumString ctx e}"
+        elaborateCodeString (generateEnumString ctx e)
 
-    -- Generate messages
+    -- Generate and elaborate messages (structures)
     for def_ in protoFile.definitions do
       if let .message m := def_ then
-        logInfo s!"\n{generateMessageString ctx m}"
-        logInfo s!"\n{generateEncodeInstanceStr ctx m}"
+        elaborateCodeString (generateMessageString ctx m)
+
+    -- Generate and elaborate ProtoMessage instances
+    for def_ in protoFile.definitions do
+      if let .message m := def_ then
+        elaborateCodeString (generateEncodeInstanceStr ctx m)
 
     -- Close namespace
     if let some pkg := protoFile.package then
-      logInfo s!"end {protoFullNameToLeanString pkg.parts}"
-
-    logInfo s!"=== End generated code ==="
+      elaborateCodeString s!"end {protoFullNameToLeanString pkg.parts}"
 
   | _ => throwUnsupportedSyntax
 
