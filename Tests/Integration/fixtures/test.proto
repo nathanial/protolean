@@ -1,0 +1,89 @@
+syntax = "proto3";
+
+package test;
+
+// Simple message for basic testing
+message SimpleMessage {
+  string name = 1;
+  int32 id = 2;
+  bool active = 3;
+}
+
+// Message with all scalar types
+message AllScalars {
+  double double_val = 1;
+  float float_val = 2;
+  int32 int32_val = 3;
+  int64 int64_val = 4;
+  uint32 uint32_val = 5;
+  uint64 uint64_val = 6;
+  sint32 sint32_val = 7;
+  sint64 sint64_val = 8;
+  fixed32 fixed32_val = 9;
+  fixed64 fixed64_val = 10;
+  sfixed32 sfixed32_val = 11;
+  sfixed64 sfixed64_val = 12;
+  bool bool_val = 13;
+  string string_val = 14;
+  bytes bytes_val = 15;
+}
+
+// Message with repeated fields
+message RepeatedFields {
+  repeated string names = 1;
+  repeated int32 numbers = 2;
+  repeated bool flags = 3;
+}
+
+// Enum
+enum Status {
+  STATUS_UNKNOWN = 0;
+  STATUS_PENDING = 1;
+  STATUS_ACTIVE = 2;
+  STATUS_COMPLETED = 3;
+}
+
+// Message with enum
+message WithEnum {
+  Status status = 1;
+  string description = 2;
+}
+
+// Nested message
+message Outer {
+  message Inner {
+    string value = 1;
+    int32 count = 2;
+  }
+  Inner inner = 1;
+  string name = 2;
+}
+
+// Message with oneof
+message WithOneof {
+  string id = 1;
+  oneof content {
+    string text = 2;
+    int32 number = 3;
+    bytes data = 4;
+  }
+}
+
+// Message with map
+message WithMap {
+  map<string, int32> scores = 1;
+  map<int32, string> labels = 2;
+}
+
+// Complex message combining multiple features
+message ComplexMessage {
+  string id = 1;
+  repeated string tags = 2;
+  Status status = 3;
+  Outer.Inner details = 4;
+  map<string, string> metadata = 5;
+  oneof payload {
+    string text_payload = 6;
+    bytes binary_payload = 7;
+  }
+}
