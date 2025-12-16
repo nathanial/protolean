@@ -14,7 +14,7 @@ Protolean is a complete Protocol Buffers implementation for Lean 4 featuring:
 Add Protolean to your `lakefile.lean`:
 
 ```lean
-require protolean from git "https://github.com/yourusername/protolean" @ "main"
+require protolean from git "https://github.com/nathanial/protolean" @ "master"
 ```
 
 ## Quick Start
