@@ -51,6 +51,9 @@ import Protolean.Import.Loader
 -- Service types
 import Protolean.Service.Types
 
+-- Well-known types (google.protobuf.*)
+import Protolean.WellKnown
+
 -- Code generation
 import Protolean.Codegen.Names
 import Protolean.Codegen.Types

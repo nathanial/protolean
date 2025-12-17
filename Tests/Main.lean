@@ -6,6 +6,7 @@ import Tests.Scalar
 import Tests.Parser
 import Tests.Import
 import Tests.Service
+import Tests.WellKnown
 
 def main : IO Unit := do
   IO.println "Running Protolean tests..."
@@ -34,6 +35,11 @@ def main : IO Unit := do
   -- Service tests
   IO.println "=== Service Tests ==="
   Tests.Service.runTests
+  IO.println ""
+
+  -- Well-known types tests
+  IO.println "=== Well-Known Types Tests ==="
+  Tests.WellKnown.runTests
   IO.println ""
 
   IO.println "All tests completed!"

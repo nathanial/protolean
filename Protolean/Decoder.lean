@@ -228,7 +228,8 @@ where
       if sign32 == 1 then -value else value
     else
       -- Normalized number: convert exponent
-      let exp64 := exp32 - 127 + 1023  -- Float bias 127 -> Double bias 1023
+      -- Use Int arithmetic to handle exponents < 127 correctly
+      let exp64 : Nat := (exp32 : Int) - 127 + 1023 |>.toNat  -- Float bias 127 -> Double bias 1023
       let mant64 := mant32.toUInt64 <<< 29  -- 23 bits -> 52 bits
       let bits64 := (sign32.toUInt64 <<< 63) ||| (exp64.toUInt64 <<< 52) ||| mant64
       Float.ofBits bits64

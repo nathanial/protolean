@@ -16,6 +16,7 @@ import Protolean.Codegen.Encode
 import Protolean.Codegen.Decode
 import Protolean.Codegen.Service
 import Protolean.Service.Types
+import Protolean.WellKnown
 
 namespace Protolean.Codegen
 
@@ -25,6 +26,15 @@ open Lean.Elab.Command
 open Protolean.Syntax
 open Protolean.Parser
 open Protolean.Import
+
+/-- Convert the well-known types registry from String → String to String → Name -/
+def wellKnownRegistry : Std.HashMap String Name :=
+  Protolean.WellKnown.registry.fold (init := {}) fun acc key value =>
+    acc.insert key (Lean.Name.mkSimple value)
+
+/-- Check if proto file imports any well-known types -/
+def hasWellKnownImport (imports : List Protolean.Syntax.Import) : Bool :=
+  imports.any fun imp => Protolean.WellKnown.isWellKnownImport imp.path
 
 /-- Parse a Lean command from a string and elaborate it -/
 def elaborateCodeString (code : String) : CommandElabM Unit := do
@@ -66,11 +76,15 @@ def elabProtoImport : CommandElab := fun stx => do
       | .ok file => pure file
       | .error err => throwError s!"Failed to parse {pathStr}: {err}"
 
-    -- Initialize codegen context
+    -- Initialize codegen context with well-known types registry
     let ctx : CodegenContext := {
       nsPath := []
-      registry := {}
+      registry := wellKnownRegistry
     }
+
+    -- If proto file imports well-known types, open the namespace
+    if hasWellKnownImport protoFile.imports then
+      elaborateCodeString "open Google.Protobuf"
 
     -- Elaborate namespace if present
     if let some pkg := protoFile.package then
