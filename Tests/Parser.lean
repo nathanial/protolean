@@ -264,6 +264,169 @@ message MyMessage {
     IO.println s!"  FAIL: parse error: {e}"
     return false
 
+/-- Test parsing top-level option -/
+def testTopLevelOption : IO Bool := do
+  let input := "
+syntax = \"proto3\";
+
+option java_package = \"com.example\";
+
+message Foo {
+  string name = 1;
+}
+"
+  match parse input with
+  | .ok file =>
+    if file.options.length != 1 then
+      IO.println s!"  FAIL: expected 1 option, got {file.options.length}"
+      return false
+    match file.options.head? with
+    | some opt =>
+      if opt.name != "java_package" then
+        IO.println s!"  FAIL: option name should be java_package, got {opt.name}"
+        return false
+      return true
+    | none =>
+      IO.println "  FAIL: no options found"
+      return false
+  | .error e =>
+    IO.println s!"  FAIL: parse error: {e}"
+    return false
+
+/-- Test parsing option with underscores and slashes in value -/
+def testGoPackageOption : IO Bool := do
+  let input := "
+syntax = \"proto3\";
+
+option go_package = \"github.com/example/pb\";
+
+message Foo {
+  string name = 1;
+}
+"
+  match parse input with
+  | .ok file =>
+    if file.options.length != 1 then
+      IO.println s!"  FAIL: expected 1 option, got {file.options.length}"
+      return false
+    match file.options.head? with
+    | some opt =>
+      if opt.name != "go_package" then
+        IO.println s!"  FAIL: option name should be go_package, got {opt.name}"
+        return false
+      match opt.value with
+      | .string s =>
+        if s != "github.com/example/pb" then
+          IO.println s!"  FAIL: option value wrong, got {s}"
+          return false
+        return true
+      | _ =>
+        IO.println "  FAIL: option value should be string"
+        return false
+    | none =>
+      IO.println "  FAIL: no options found"
+      return false
+  | .error e =>
+    IO.println s!"  FAIL: parse error: {e}"
+    return false
+
+/-- Test parsing a simple service -/
+def testSimpleService : IO Bool := do
+  let input := "
+syntax = \"proto3\";
+
+message Request {
+  string query = 1;
+}
+
+message Response {
+  string result = 1;
+}
+
+service SearchService {
+  rpc Search(Request) returns (Response);
+}
+"
+  match parse input with
+  | .ok file =>
+    if file.definitions.length != 3 then
+      IO.println s!"  FAIL: expected 3 definitions, got {file.definitions.length}"
+      return false
+    match file.definitions[2]? with
+    | some (TopLevelDef.service svc) =>
+      if svc.name != "SearchService" then
+        IO.println s!"  FAIL: service name should be SearchService, got {svc.name}"
+        return false
+      if svc.methods.length != 1 then
+        IO.println s!"  FAIL: expected 1 method, got {svc.methods.length}"
+        return false
+      match svc.methods.head? with
+      | some m =>
+        if m.name != "Search" then
+          IO.println s!"  FAIL: method name should be Search, got {m.name}"
+          return false
+        return true
+      | none =>
+        IO.println "  FAIL: no methods found"
+        return false
+    | _ =>
+      IO.println "  FAIL: expected service definition"
+      return false
+  | .error e =>
+    IO.println s!"  FAIL: parse error: {e}"
+    return false
+
+/-- Test parsing streaming RPCs -/
+def testStreamingRpc : IO Bool := do
+  let input := "
+syntax = \"proto3\";
+
+message Msg {
+  string data = 1;
+}
+
+service StreamService {
+  rpc ClientStream(stream Msg) returns (Msg);
+  rpc ServerStream(Msg) returns (stream Msg);
+  rpc BidiStream(stream Msg) returns (stream Msg);
+}
+"
+  match parse input with
+  | .ok file =>
+    match file.definitions[1]? with
+    | some (TopLevelDef.service svc) =>
+      if svc.methods.length != 3 then
+        IO.println s!"  FAIL: expected 3 methods, got {svc.methods.length}"
+        return false
+      -- Check ClientStream
+      match svc.methods[0]? with
+      | some m =>
+        if !m.inputStream || m.outputStream then
+          IO.println s!"  FAIL: ClientStream should have inputStream=true, outputStream=false"
+          return false
+      | none => return false
+      -- Check ServerStream
+      match svc.methods[1]? with
+      | some m =>
+        if m.inputStream || !m.outputStream then
+          IO.println s!"  FAIL: ServerStream should have inputStream=false, outputStream=true"
+          return false
+      | none => return false
+      -- Check BidiStream
+      match svc.methods[2]? with
+      | some m =>
+        if !m.inputStream || !m.outputStream then
+          IO.println s!"  FAIL: BidiStream should have both streams true"
+          return false
+      | none => return false
+      return true
+    | _ =>
+      IO.println "  FAIL: expected service definition"
+      return false
+  | .error e =>
+    IO.println s!"  FAIL: parse error: {e}"
+    return false
+
 /-- Run all parser tests -/
 def runTests : IO Unit := do
   let mut passed := 0
@@ -292,6 +455,18 @@ def runTests : IO Unit := do
 
   IO.println "Testing imports and package..."
   if ← testImportsAndPackage then passed := passed + 1 else failed := failed + 1
+
+  IO.println "Testing top-level option..."
+  if ← testTopLevelOption then passed := passed + 1 else failed := failed + 1
+
+  IO.println "Testing go_package option..."
+  if ← testGoPackageOption then passed := passed + 1 else failed := failed + 1
+
+  IO.println "Testing simple service..."
+  if ← testSimpleService then passed := passed + 1 else failed := failed + 1
+
+  IO.println "Testing streaming RPCs..."
+  if ← testStreamingRpc then passed := passed + 1 else failed := failed + 1
 
   IO.println s!"Parser tests: {passed} passed, {failed} failed"
 

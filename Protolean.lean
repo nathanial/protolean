@@ -48,9 +48,13 @@ import Protolean.Parser.Proto
 import Protolean.Import.Resolver
 import Protolean.Import.Loader
 
+-- Service types
+import Protolean.Service.Types
+
 -- Code generation
 import Protolean.Codegen.Names
 import Protolean.Codegen.Types
 import Protolean.Codegen.Encode
 import Protolean.Codegen.Decode
+import Protolean.Codegen.Service
 import Protolean.Codegen.Import

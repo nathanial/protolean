@@ -14,6 +14,8 @@ import Protolean.Import.Loader
 import Protolean.Codegen.Types
 import Protolean.Codegen.Encode
 import Protolean.Codegen.Decode
+import Protolean.Codegen.Service
+import Protolean.Service.Types
 
 namespace Protolean.Codegen
 
@@ -88,6 +90,13 @@ def elabProtoImport : CommandElab := fun stx => do
     for def_ in protoFile.definitions do
       if let .message m := def_ then
         elaborateCodeString (generateEncodeInstanceStr ctx m)
+
+    -- Generate and elaborate service type classes and metadata
+    for def_ in protoFile.definitions do
+      if let .service svc := def_ then
+        let (typeClass, info) := generateServiceString ctx protoFile.package svc
+        elaborateCodeString typeClass
+        elaborateCodeString info
 
     -- Close namespace
     if let some pkg := protoFile.package then

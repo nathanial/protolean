@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package test.service;
+
+option go_package = "test/service/pb";
+
+// Request message for testing
+message Request {
+  string query = 1;
+  int32 limit = 2;
+}
+
+// Response message for testing
+message Response {
+  string result = 1;
+  bool success = 2;
+}
+
+// Streaming data message
+message StreamData {
+  bytes data = 1;
+  int64 sequence = 2;
+}
+
+// Service with various RPC types
+service TestService {
+  // Unary RPC
+  rpc Unary(Request) returns (Response);
+
+  // Client streaming
+  rpc ClientStream(stream Request) returns (Response);
+
+  // Server streaming
+  rpc ServerStream(Request) returns (stream Response);
+
+  // Bidirectional streaming
+  rpc BidiStream(stream StreamData) returns (stream StreamData);
+}
+
+// Another service for testing multiple services
+service EchoService {
+  rpc Echo(Request) returns (Request);
+}

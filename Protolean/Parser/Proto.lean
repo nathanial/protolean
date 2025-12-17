@@ -177,7 +177,7 @@ where
         let ext ← fullIdent
         symbol ")"
         pure s!"({".".intercalate ext})") <|>
-      ident)
+      (attempt ident))
     pure (".".intercalate parts.toList)
 
 /-- Parse an enum definition -/
