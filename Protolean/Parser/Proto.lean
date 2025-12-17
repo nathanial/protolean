@@ -328,7 +328,7 @@ where
 
 /-- Main entry point: parse a proto3 file from string -/
 def parse (input : String) : Except String ProtoFile :=
-  match protoFile input.iter with
+  match protoFile ⟨input, ⟨⟨0⟩, by simp⟩⟩ with
   | .success _ file => .ok file
   | .error _ msg => .error (toString msg)
 
