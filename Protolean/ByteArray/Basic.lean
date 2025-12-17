@@ -1,6 +1,13 @@
 /-
   ByteArray utility functions for little-endian reading and writing.
 -/
+
+/-- Repr instance for ByteArray to allow deriving Repr on structures with ByteArray fields -/
+instance : Repr ByteArray where
+  reprPrec ba _ :=
+    let bytes := ba.toList.map fun b => toString b.toNat
+    s!"ByteArray.mk #[{", ".intercalate bytes}]"
+
 namespace Protolean.ByteArray
 
 /-- Push a UInt16 in little-endian order -/

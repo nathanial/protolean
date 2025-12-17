@@ -3,11 +3,13 @@
 -/
 import Protolean.Parser.Proto
 import Protolean.Syntax.AST
+import Protolean.Codegen.Names
 
 namespace Tests.Parser
 
 open Protolean.Parser
 open Protolean.Syntax
+open Protolean.Codegen
 
 /-- Test parsing a simple message -/
 def testSimpleMessage : IO Bool := do
@@ -427,6 +429,32 @@ service StreamService {
     IO.println s!"  FAIL: parse error: {e}"
     return false
 
+/-- Test keyword escaping in field names -/
+def testKeywordEscaping : IO Bool := do
+  -- Test that reserved keywords get escaped with underscore
+  let tests := [
+    ("prefix", "prefix_"),
+    ("infix", "infix_"),
+    ("notation", "notation_"),
+    ("def", "def_"),
+    ("where", "where_"),
+    ("match", "match_"),
+    -- Non-keywords should not be escaped
+    ("name", "name"),
+    ("value", "value"),
+    ("count", "count"),
+    -- Snake_case conversion with keyword escaping
+    ("in_progress", "inProgress"),  -- "in" is keyword but "inProgress" is not
+    ("prefix_value", "prefixValue") -- "prefix" is keyword but "prefixValue" is not
+  ]
+  for (input, expected) in tests do
+    let result := protoFieldToLean input
+    if result != expected then
+      IO.println s!"  FAIL: protoFieldToLean \"{input}\" = \"{result}\", expected \"{expected}\""
+      return false
+  IO.println "  PASS: keyword escaping"
+  return true
+
 /-- Run all parser tests -/
 def runTests : IO Unit := do
   let mut passed := 0
@@ -467,6 +495,9 @@ def runTests : IO Unit := do
 
   IO.println "Testing streaming RPCs..."
   if ← testStreamingRpc then passed := passed + 1 else failed := failed + 1
+
+  IO.println "Testing keyword escaping..."
+  if ← testKeywordEscaping then passed := passed + 1 else failed := failed + 1
 
   IO.println s!"Parser tests: {passed} passed, {failed} failed"
 
