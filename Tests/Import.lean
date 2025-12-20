@@ -3,9 +3,12 @@
 
   This test verifies that proto_import generates usable Lean types.
 -/
+import Crucible
 import Protolean
 
 namespace Tests.Import
+
+open Crucible
 
 -- Import the test proto file - this should generate TestMessage and Person types
 proto_import "test.proto"
@@ -24,46 +27,21 @@ def testPerson : Person := {
   emails := #["alice@example.com", "alice@work.com"]
 }
 
--- Test encoding
-def testEncode : IO Bool := do
-  let bytes := Protolean.encodeMessage testMessage
-  if bytes.size > 0 then
-    IO.println s!"  PASS: Encoded TestMessage to {bytes.size} bytes"
-    return true
-  else
-    IO.println "  FAIL: Encoding produced empty bytes"
-    return false
+testSuite "Import Tests"
 
--- Test round-trip
-def testRoundTrip : IO Bool := do
+test "encode TestMessage produces bytes" := do
+  let bytes := Protolean.encodeMessage testMessage
+  ensure (bytes.size > 0) "Encoding should produce bytes"
+
+test "TestMessage roundtrip" := do
   let bytes := Protolean.encodeMessage testMessage
   match Protolean.decodeMessage bytes with
   | .ok (decoded : TestMessage) =>
-    if decoded.name == testMessage.name &&
-       decoded.value == testMessage.value &&
-       decoded.active == testMessage.active then
-      IO.println "  PASS: Round-trip successful"
-      return true
-    else
-      IO.println s!"  FAIL: Decoded values don't match"
-      return false
-  | .error e =>
-    IO.println s!"  FAIL: Decode error: {e}"
-    return false
+    ensure (decoded.name == testMessage.name) "name should match"
+    ensure (decoded.value == testMessage.value) "value should match"
+    ensure (decoded.active == testMessage.active) "active should match"
+  | .error _ => ensure false "Decode failed"
 
-/-- Run all import tests -/
-def runTests : IO Unit := do
-  let mut passed := 0
-  let mut failed := 0
-
-  IO.println "Testing proto_import..."
-
-  IO.println "Testing encoding..."
-  if ← testEncode then passed := passed + 1 else failed := failed + 1
-
-  IO.println "Testing round-trip..."
-  if ← testRoundTrip then passed := passed + 1 else failed := failed + 1
-
-  IO.println s!"Import tests: {passed} passed, {failed} failed"
+#generate_tests
 
 end Tests.Import

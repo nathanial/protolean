@@ -1,18 +1,21 @@
 /-
   Unit tests for the Proto3 parser.
 -/
+import Crucible
 import Protolean.Parser.Proto
 import Protolean.Syntax.AST
 import Protolean.Codegen.Names
 
 namespace Tests.Parser
 
+open Crucible
 open Protolean.Parser
 open Protolean.Syntax
 open Protolean.Codegen
 
-/-- Test parsing a simple message -/
-def testSimpleMessage : IO Bool := do
+testSuite "Parser Tests"
+
+test "parse simple message" := do
   let input := "
 syntax = \"proto3\";
 
@@ -23,30 +26,16 @@ message Person {
 "
   match parse input with
   | .ok file =>
-    if file.protoSyntax != "proto3" then
-      IO.println "  FAIL: syntax should be proto3"
-      return false
-    if file.definitions.length != 1 then
-      IO.println s!"  FAIL: expected 1 definition, got {file.definitions.length}"
-      return false
+    ensure (file.protoSyntax == "proto3") "syntax should be proto3"
+    ensure (file.definitions.length == 1) "expected 1 definition"
     match file.definitions.head? with
     | some (.message msg) =>
-      if msg.name != "Person" then
-        IO.println s!"  FAIL: message name should be Person, got {msg.name}"
-        return false
-      if msg.fields.length != 2 then
-        IO.println s!"  FAIL: expected 2 fields, got {msg.fields.length}"
-        return false
-      return true
-    | _ =>
-      IO.println "  FAIL: expected message definition"
-      return false
-  | .error e =>
-    IO.println s!"  FAIL: parse error: {e}"
-    return false
+      ensure (msg.name == "Person") "message name should be Person"
+      ensure (msg.fields.length == 2) "expected 2 fields"
+    | _ => ensure false "expected message definition"
+  | .error _ => ensure false "parse failed"
 
-/-- Test parsing an enum -/
-def testEnum : IO Bool := do
+test "parse enum" := do
   let input := "
 syntax = \"proto3\";
 
@@ -60,22 +49,12 @@ enum Status {
   | .ok file =>
     match file.definitions.head? with
     | some (.enum e) =>
-      if e.name != "Status" then
-        IO.println s!"  FAIL: enum name should be Status, got {e.name}"
-        return false
-      if e.values.length != 3 then
-        IO.println s!"  FAIL: expected 3 values, got {e.values.length}"
-        return false
-      return true
-    | _ =>
-      IO.println "  FAIL: expected enum definition"
-      return false
-  | .error e =>
-    IO.println s!"  FAIL: parse error: {e}"
-    return false
+      ensure (e.name == "Status") "enum name should be Status"
+      ensure (e.values.length == 3) "expected 3 values"
+    | _ => ensure false "expected enum definition"
+  | .error _ => ensure false "parse failed"
 
-/-- Test parsing a message with various field types -/
-def testFieldTypes : IO Bool := do
+test "parse all field types" := do
   let input := "
 syntax = \"proto3\";
 
@@ -101,19 +80,11 @@ message AllTypes {
   | .ok file =>
     match file.definitions.head? with
     | some (.message msg) =>
-      if msg.fields.length != 15 then
-        IO.println s!"  FAIL: expected 15 fields, got {msg.fields.length}"
-        return false
-      return true
-    | _ =>
-      IO.println "  FAIL: expected message definition"
-      return false
-  | .error e =>
-    IO.println s!"  FAIL: parse error: {e}"
-    return false
+      ensure (msg.fields.length == 15) "expected 15 fields"
+    | _ => ensure false "expected message definition"
+  | .error _ => ensure false "parse failed"
 
-/-- Test parsing repeated fields -/
-def testRepeatedFields : IO Bool := do
+test "parse repeated fields" := do
   let input := "
 syntax = \"proto3\";
 
@@ -126,20 +97,12 @@ message Container {
   | .ok file =>
     match file.definitions.head? with
     | some (.message msg) =>
-      for field in msg.fields do
-        if field.cardinality != .repeated then
-          IO.println s!"  FAIL: field {field.name} should be repeated"
-          return false
-      return true
-    | _ =>
-      IO.println "  FAIL: expected message definition"
-      return false
-  | .error e =>
-    IO.println s!"  FAIL: parse error: {e}"
-    return false
+      let allRepeated := msg.fields.all (·.cardinality == .repeated)
+      ensure allRepeated "all fields should be repeated"
+    | _ => ensure false "expected message definition"
+  | .error _ => ensure false "parse failed"
 
-/-- Test parsing a oneof -/
-def testOneof : IO Bool := do
+test "parse oneof" := do
   let input := "
 syntax = \"proto3\";
 
@@ -154,30 +117,16 @@ message Contact {
   | .ok file =>
     match file.definitions.head? with
     | some (.message msg) =>
-      if msg.oneofs.length != 1 then
-        IO.println s!"  FAIL: expected 1 oneof, got {msg.oneofs.length}"
-        return false
+      ensure (msg.oneofs.length == 1) "expected 1 oneof"
       match msg.oneofs.head? with
       | some oneof =>
-        if oneof.name != "contact_type" then
-          IO.println s!"  FAIL: oneof name should be contact_type, got {oneof.name}"
-          return false
-        if oneof.fields.length != 2 then
-          IO.println s!"  FAIL: expected 2 fields in oneof, got {oneof.fields.length}"
-          return false
-        return true
-      | none =>
-        IO.println "  FAIL: no oneof found"
-        return false
-    | _ =>
-      IO.println "  FAIL: expected message definition"
-      return false
-  | .error e =>
-    IO.println s!"  FAIL: parse error: {e}"
-    return false
+        ensure (oneof.name == "contact_type") "oneof name should be contact_type"
+        ensure (oneof.fields.length == 2) "expected 2 fields in oneof"
+      | none => ensure false "no oneof found"
+    | _ => ensure false "expected message definition"
+  | .error _ => ensure false "parse failed"
 
-/-- Test parsing a map field -/
-def testMapField : IO Bool := do
+test "parse map field" := do
   let input := "
 syntax = \"proto3\";
 
@@ -192,22 +141,13 @@ message Dictionary {
       match msg.fields.head? with
       | some field =>
         match field.fieldType with
-        | .map _ _ => return true
-        | _ =>
-          IO.println "  FAIL: expected map field type"
-          return false
-      | none =>
-        IO.println "  FAIL: no fields found"
-        return false
-    | _ =>
-      IO.println "  FAIL: expected message definition"
-      return false
-  | .error e =>
-    IO.println s!"  FAIL: parse error: {e}"
-    return false
+        | .map _ _ => pure ()
+        | _ => ensure false "expected map field type"
+      | none => ensure false "no fields found"
+    | _ => ensure false "expected message definition"
+  | .error _ => ensure false "parse failed"
 
-/-- Test parsing nested messages -/
-def testNestedMessage : IO Bool := do
+test "parse nested message" := do
   let input := "
 syntax = \"proto3\";
 
@@ -222,19 +162,11 @@ message Outer {
   | .ok file =>
     match file.definitions.head? with
     | some (.message msg) =>
-      if msg.nestedMessages.length != 1 then
-        IO.println s!"  FAIL: expected 1 nested message, got {msg.nestedMessages.length}"
-        return false
-      return true
-    | _ =>
-      IO.println "  FAIL: expected message definition"
-      return false
-  | .error e =>
-    IO.println s!"  FAIL: parse error: {e}"
-    return false
+      ensure (msg.nestedMessages.length == 1) "expected 1 nested message"
+    | _ => ensure false "expected message definition"
+  | .error _ => ensure false "parse failed"
 
-/-- Test parsing imports and package -/
-def testImportsAndPackage : IO Bool := do
+test "parse imports and package" := do
   let input := "
 syntax = \"proto3\";
 
@@ -249,25 +181,15 @@ message MyMessage {
 "
   match parse input with
   | .ok file =>
-    if file.package.isNone then
-      IO.println "  FAIL: expected package"
-      return false
+    ensure file.package.isSome "expected package"
     match file.package with
     | some pkg =>
-      if pkg.parts != ["example", "v1"] then
-        IO.println s!"  FAIL: package should be example.v1, got {pkg.parts}"
-        return false
+      ensure (pkg.parts == ["example", "v1"]) "package should be example.v1"
     | none => pure ()
-    if file.imports.length != 2 then
-      IO.println s!"  FAIL: expected 2 imports, got {file.imports.length}"
-      return false
-    return true
-  | .error e =>
-    IO.println s!"  FAIL: parse error: {e}"
-    return false
+    ensure (file.imports.length == 2) "expected 2 imports"
+  | .error _ => ensure false "parse failed"
 
-/-- Test parsing top-level option -/
-def testTopLevelOption : IO Bool := do
+test "parse top level option" := do
   let input := "
 syntax = \"proto3\";
 
@@ -279,24 +201,14 @@ message Foo {
 "
   match parse input with
   | .ok file =>
-    if file.options.length != 1 then
-      IO.println s!"  FAIL: expected 1 option, got {file.options.length}"
-      return false
+    ensure (file.options.length == 1) "expected 1 option"
     match file.options.head? with
     | some opt =>
-      if opt.name != "java_package" then
-        IO.println s!"  FAIL: option name should be java_package, got {opt.name}"
-        return false
-      return true
-    | none =>
-      IO.println "  FAIL: no options found"
-      return false
-  | .error e =>
-    IO.println s!"  FAIL: parse error: {e}"
-    return false
+      ensure (opt.name == "java_package") "option name should be java_package"
+    | none => ensure false "no options found"
+  | .error _ => ensure false "parse failed"
 
-/-- Test parsing option with underscores and slashes in value -/
-def testGoPackageOption : IO Bool := do
+test "parse go package option" := do
   let input := "
 syntax = \"proto3\";
 
@@ -308,32 +220,18 @@ message Foo {
 "
   match parse input with
   | .ok file =>
-    if file.options.length != 1 then
-      IO.println s!"  FAIL: expected 1 option, got {file.options.length}"
-      return false
+    ensure (file.options.length == 1) "expected 1 option"
     match file.options.head? with
     | some opt =>
-      if opt.name != "go_package" then
-        IO.println s!"  FAIL: option name should be go_package, got {opt.name}"
-        return false
+      ensure (opt.name == "go_package") "option name should be go_package"
       match opt.value with
       | .string s =>
-        if s != "github.com/example/pb" then
-          IO.println s!"  FAIL: option value wrong, got {s}"
-          return false
-        return true
-      | _ =>
-        IO.println "  FAIL: option value should be string"
-        return false
-    | none =>
-      IO.println "  FAIL: no options found"
-      return false
-  | .error e =>
-    IO.println s!"  FAIL: parse error: {e}"
-    return false
+        ensure (s == "github.com/example/pb") "option value should be github.com/example/pb"
+      | _ => ensure false "option value should be string"
+    | none => ensure false "no options found"
+  | .error _ => ensure false "parse failed"
 
-/-- Test parsing a simple service -/
-def testSimpleService : IO Bool := do
+test "parse simple service" := do
   let input := "
 syntax = \"proto3\";
 
@@ -351,35 +249,19 @@ service SearchService {
 "
   match parse input with
   | .ok file =>
-    if file.definitions.length != 3 then
-      IO.println s!"  FAIL: expected 3 definitions, got {file.definitions.length}"
-      return false
+    ensure (file.definitions.length == 3) "expected 3 definitions"
     match file.definitions[2]? with
     | some (TopLevelDef.service svc) =>
-      if svc.name != "SearchService" then
-        IO.println s!"  FAIL: service name should be SearchService, got {svc.name}"
-        return false
-      if svc.methods.length != 1 then
-        IO.println s!"  FAIL: expected 1 method, got {svc.methods.length}"
-        return false
+      ensure (svc.name == "SearchService") "service name should be SearchService"
+      ensure (svc.methods.length == 1) "expected 1 method"
       match svc.methods.head? with
       | some m =>
-        if m.name != "Search" then
-          IO.println s!"  FAIL: method name should be Search, got {m.name}"
-          return false
-        return true
-      | none =>
-        IO.println "  FAIL: no methods found"
-        return false
-    | _ =>
-      IO.println "  FAIL: expected service definition"
-      return false
-  | .error e =>
-    IO.println s!"  FAIL: parse error: {e}"
-    return false
+        ensure (m.name == "Search") "method name should be Search"
+      | none => ensure false "no methods found"
+    | _ => ensure false "expected service definition"
+  | .error _ => ensure false "parse failed"
 
-/-- Test parsing streaming RPCs -/
-def testStreamingRpc : IO Bool := do
+test "parse streaming RPCs" := do
   let input := "
 syntax = \"proto3\";
 
@@ -397,40 +279,26 @@ service StreamService {
   | .ok file =>
     match file.definitions[1]? with
     | some (TopLevelDef.service svc) =>
-      if svc.methods.length != 3 then
-        IO.println s!"  FAIL: expected 3 methods, got {svc.methods.length}"
-        return false
+      ensure (svc.methods.length == 3) "expected 3 methods"
       -- Check ClientStream
       match svc.methods[0]? with
       | some m =>
-        if !m.inputStream || m.outputStream then
-          IO.println s!"  FAIL: ClientStream should have inputStream=true, outputStream=false"
-          return false
-      | none => return false
+        ensure (m.inputStream && !m.outputStream) "ClientStream should have inputStream=true, outputStream=false"
+      | none => ensure false "ClientStream not found"
       -- Check ServerStream
       match svc.methods[1]? with
       | some m =>
-        if m.inputStream || !m.outputStream then
-          IO.println s!"  FAIL: ServerStream should have inputStream=false, outputStream=true"
-          return false
-      | none => return false
+        ensure (!m.inputStream && m.outputStream) "ServerStream should have inputStream=false, outputStream=true"
+      | none => ensure false "ServerStream not found"
       -- Check BidiStream
       match svc.methods[2]? with
       | some m =>
-        if !m.inputStream || !m.outputStream then
-          IO.println s!"  FAIL: BidiStream should have both streams true"
-          return false
-      | none => return false
-      return true
-    | _ =>
-      IO.println "  FAIL: expected service definition"
-      return false
-  | .error e =>
-    IO.println s!"  FAIL: parse error: {e}"
-    return false
+        ensure (m.inputStream && m.outputStream) "BidiStream should have both streams true"
+      | none => ensure false "BidiStream not found"
+    | _ => ensure false "expected service definition"
+  | .error _ => ensure false "parse failed"
 
-/-- Test keyword escaping in field names -/
-def testKeywordEscaping : IO Bool := do
+test "keyword escaping" := do
   -- Test that reserved keywords get escaped with underscore
   let tests := [
     ("prefix", "prefix_"),
@@ -444,61 +312,13 @@ def testKeywordEscaping : IO Bool := do
     ("value", "value"),
     ("count", "count"),
     -- Snake_case conversion with keyword escaping
-    ("in_progress", "inProgress"),  -- "in" is keyword but "inProgress" is not
-    ("prefix_value", "prefixValue") -- "prefix" is keyword but "prefixValue" is not
+    ("in_progress", "inProgress"),
+    ("prefix_value", "prefixValue")
   ]
   for (input, expected) in tests do
     let result := protoFieldToLean input
-    if result != expected then
-      IO.println s!"  FAIL: protoFieldToLean \"{input}\" = \"{result}\", expected \"{expected}\""
-      return false
-  IO.println "  PASS: keyword escaping"
-  return true
+    ensure (result == expected) s!"protoFieldToLean \"{input}\" = \"{result}\", expected \"{expected}\""
 
-/-- Run all parser tests -/
-def runTests : IO Unit := do
-  let mut passed := 0
-  let mut failed := 0
-
-  IO.println "Testing simple message..."
-  if ← testSimpleMessage then passed := passed + 1 else failed := failed + 1
-
-  IO.println "Testing enum..."
-  if ← testEnum then passed := passed + 1 else failed := failed + 1
-
-  IO.println "Testing field types..."
-  if ← testFieldTypes then passed := passed + 1 else failed := failed + 1
-
-  IO.println "Testing repeated fields..."
-  if ← testRepeatedFields then passed := passed + 1 else failed := failed + 1
-
-  IO.println "Testing oneof..."
-  if ← testOneof then passed := passed + 1 else failed := failed + 1
-
-  IO.println "Testing map field..."
-  if ← testMapField then passed := passed + 1 else failed := failed + 1
-
-  IO.println "Testing nested message..."
-  if ← testNestedMessage then passed := passed + 1 else failed := failed + 1
-
-  IO.println "Testing imports and package..."
-  if ← testImportsAndPackage then passed := passed + 1 else failed := failed + 1
-
-  IO.println "Testing top-level option..."
-  if ← testTopLevelOption then passed := passed + 1 else failed := failed + 1
-
-  IO.println "Testing go_package option..."
-  if ← testGoPackageOption then passed := passed + 1 else failed := failed + 1
-
-  IO.println "Testing simple service..."
-  if ← testSimpleService then passed := passed + 1 else failed := failed + 1
-
-  IO.println "Testing streaming RPCs..."
-  if ← testStreamingRpc then passed := passed + 1 else failed := failed + 1
-
-  IO.println "Testing keyword escaping..."
-  if ← testKeywordEscaping then passed := passed + 1 else failed := failed + 1
-
-  IO.println s!"Parser tests: {passed} passed, {failed} failed"
+#generate_tests
 
 end Tests.Parser

@@ -1,10 +1,12 @@
 /-
   Unit tests for scalar type encoding/decoding.
 -/
+import Crucible
 import Protolean
 
 namespace Tests.Scalar
 
+open Crucible
 open Protolean
 
 /-- Repr instance for ByteArray for test output -/
@@ -12,82 +14,100 @@ instance : Repr ByteArray where
   reprPrec ba _ := s!"ByteArray.mk #[{", ".intercalate (ba.toList.map toString)}]"
 
 /-- Test helper to check encode/decode round-trip for a type -/
-def testRoundTrip [ProtoCodec α] [BEq α] [Repr α] (name : String) (value : α) : IO Bool := do
+def testRoundTrip [ProtoCodec α] [BEq α] [Repr α] (value : α) : IO Bool := do
   let encoded := Encoder.execute (ProtoEncodable.encode value)
   match Decoder.execute ProtoDecodable.decode encoded with
-  | .ok decoded =>
-    if decoded == value then
-      return true
-    else
-      IO.println s!"  FAIL: {name} {repr value} decoded as {repr decoded}"
-      return false
-  | .error e =>
-    IO.println s!"  FAIL: {name} {repr value} decode error: {e}"
-    return false
+  | .ok decoded => pure (decoded == value)
+  | .error _ => pure false
 
-/-- Test that default values produce empty encoding -/
-def testDefaultEmpty [ProtoEncodable α] [Repr α] (name : String) (value : α) : IO Bool := do
-  if ProtoEncodable.isDefault value then
-    return true
-  else
-    IO.println s!"  FAIL: {name} {repr value} should be default but isDefault returned false"
-    return false
+testSuite "Scalar Tests"
 
-/-- Run all scalar tests -/
-def runTests : IO Unit := do
-  let mut passed := 0
-  let mut failed := 0
+-- UInt32 tests
+test "UInt32 roundtrip 0" := do
+  ensure (← testRoundTrip (0 : UInt32)) "0 should round-trip"
 
-  -- Test UInt32
-  IO.println "Testing UInt32..."
-  if ← testRoundTrip "UInt32" (0 : UInt32) then passed := passed + 1 else failed := failed + 1
-  if ← testRoundTrip "UInt32" (1 : UInt32) then passed := passed + 1 else failed := failed + 1
-  if ← testRoundTrip "UInt32" (127 : UInt32) then passed := passed + 1 else failed := failed + 1
-  if ← testRoundTrip "UInt32" (128 : UInt32) then passed := passed + 1 else failed := failed + 1
-  if ← testRoundTrip "UInt32" (0xFFFFFFFF : UInt32) then passed := passed + 1 else failed := failed + 1
+test "UInt32 roundtrip 1" := do
+  ensure (← testRoundTrip (1 : UInt32)) "1 should round-trip"
 
-  -- Test UInt64
-  IO.println "Testing UInt64..."
-  if ← testRoundTrip "UInt64" (0 : UInt64) then passed := passed + 1 else failed := failed + 1
-  if ← testRoundTrip "UInt64" (0xFFFFFFFFFFFFFFFF : UInt64) then passed := passed + 1 else failed := failed + 1
+test "UInt32 roundtrip 127" := do
+  ensure (← testRoundTrip (127 : UInt32)) "127 should round-trip"
 
-  -- Test Int32
-  IO.println "Testing Int32..."
-  if ← testRoundTrip "Int32" (0 : Int32) then passed := passed + 1 else failed := failed + 1
-  if ← testRoundTrip "Int32" (1 : Int32) then passed := passed + 1 else failed := failed + 1
-  if ← testRoundTrip "Int32" (-1 : Int32) then passed := passed + 1 else failed := failed + 1
-  if ← testRoundTrip "Int32" (2147483647 : Int32) then passed := passed + 1 else failed := failed + 1
-  if ← testRoundTrip "Int32" (-2147483648 : Int32) then passed := passed + 1 else failed := failed + 1
+test "UInt32 roundtrip 128" := do
+  ensure (← testRoundTrip (128 : UInt32)) "128 should round-trip"
 
-  -- Test Int64
-  IO.println "Testing Int64..."
-  if ← testRoundTrip "Int64" (0 : Int64) then passed := passed + 1 else failed := failed + 1
-  if ← testRoundTrip "Int64" (-1 : Int64) then passed := passed + 1 else failed := failed + 1
+test "UInt32 roundtrip max" := do
+  ensure (← testRoundTrip (0xFFFFFFFF : UInt32)) "max UInt32 should round-trip"
 
-  -- Test Bool
-  IO.println "Testing Bool..."
-  if ← testRoundTrip "Bool" false then passed := passed + 1 else failed := failed + 1
-  if ← testRoundTrip "Bool" true then passed := passed + 1 else failed := failed + 1
+-- UInt64 tests
+test "UInt64 roundtrip 0" := do
+  ensure (← testRoundTrip (0 : UInt64)) "0 should round-trip"
 
-  -- Test String
-  IO.println "Testing String..."
-  if ← testRoundTrip "String" "" then passed := passed + 1 else failed := failed + 1
-  if ← testRoundTrip "String" "hello" then passed := passed + 1 else failed := failed + 1
-  if ← testRoundTrip "String" "Hello, 世界!" then passed := passed + 1 else failed := failed + 1
+test "UInt64 roundtrip max" := do
+  ensure (← testRoundTrip (0xFFFFFFFFFFFFFFFF : UInt64)) "max UInt64 should round-trip"
 
-  -- Test ByteArray
-  IO.println "Testing ByteArray..."
-  if ← testRoundTrip "ByteArray" ByteArray.empty then passed := passed + 1 else failed := failed + 1
-  if ← testRoundTrip "ByteArray" (ByteArray.mk #[1, 2, 3, 4, 5]) then passed := passed + 1 else failed := failed + 1
+-- Int32 tests
+test "Int32 roundtrip 0" := do
+  ensure (← testRoundTrip (0 : Int32)) "0 should round-trip"
 
-  -- Test default values are detected
-  IO.println "Testing default value detection..."
-  if ← testDefaultEmpty "UInt32" (0 : UInt32) then passed := passed + 1 else failed := failed + 1
-  if ← testDefaultEmpty "Int32" (0 : Int32) then passed := passed + 1 else failed := failed + 1
-  if ← testDefaultEmpty "Bool" false then passed := passed + 1 else failed := failed + 1
-  if ← testDefaultEmpty "String" "" then passed := passed + 1 else failed := failed + 1
-  if ← testDefaultEmpty "ByteArray" ByteArray.empty then passed := passed + 1 else failed := failed + 1
+test "Int32 roundtrip pos1" := do
+  ensure (← testRoundTrip (1 : Int32)) "1 should round-trip"
 
-  IO.println s!"Scalar tests: {passed} passed, {failed} failed"
+test "Int32 roundtrip neg1" := do
+  ensure (← testRoundTrip ((-1) : Int32)) "-1 should round-trip"
+
+test "Int32 roundtrip max" := do
+  ensure (← testRoundTrip (2147483647 : Int32)) "max Int32 should round-trip"
+
+test "Int32 roundtrip min" := do
+  ensure (← testRoundTrip ((-2147483648) : Int32)) "min Int32 should round-trip"
+
+-- Int64 tests
+test "Int64 roundtrip 0" := do
+  ensure (← testRoundTrip (0 : Int64)) "0 should round-trip"
+
+test "Int64 roundtrip neg1" := do
+  ensure (← testRoundTrip ((-1) : Int64)) "-1 should round-trip"
+
+-- Bool tests
+test "Bool roundtrip false" := do
+  ensure (← testRoundTrip false) "false should round-trip"
+
+test "Bool roundtrip true" := do
+  ensure (← testRoundTrip true) "true should round-trip"
+
+-- String tests
+test "String roundtrip empty" := do
+  ensure (← testRoundTrip "") "empty string should round-trip"
+
+test "String roundtrip hello" := do
+  ensure (← testRoundTrip "hello") "hello should round-trip"
+
+test "String roundtrip unicode" := do
+  ensure (← testRoundTrip "Hello, 世界!") "unicode string should round-trip"
+
+-- ByteArray tests
+test "ByteArray roundtrip empty" := do
+  ensure (← testRoundTrip ByteArray.empty) "empty ByteArray should round-trip"
+
+test "ByteArray roundtrip data" := do
+  ensure (← testRoundTrip (ByteArray.mk #[1, 2, 3, 4, 5])) "ByteArray should round-trip"
+
+-- Default value detection tests
+test "UInt32 zero is default" := do
+  ensure (ProtoEncodable.isDefault (0 : UInt32)) "0 should be default"
+
+test "Int32 zero is default" := do
+  ensure (ProtoEncodable.isDefault (0 : Int32)) "0 should be default"
+
+test "Bool false is default" := do
+  ensure (ProtoEncodable.isDefault false) "false should be default"
+
+test "String empty is default" := do
+  ensure (ProtoEncodable.isDefault "") "empty string should be default"
+
+test "ByteArray empty is default" := do
+  ensure (ProtoEncodable.isDefault ByteArray.empty) "empty ByteArray should be default"
+
+#generate_tests
 
 end Tests.Scalar

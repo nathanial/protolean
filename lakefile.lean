@@ -4,6 +4,8 @@ open Lake DSL
 package protolean where
   version := v!"0.1.0"
 
+require crucible from git "https://github.com/nathanial/crucible" @ "master"
+
 @[default_target]
 lean_lib Protolean where
   globs := #[.andSubmodules `Protolean]
