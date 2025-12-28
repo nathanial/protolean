@@ -21,90 +21,95 @@ testSuite "WellKnown Tests"
 
 -- Empty type tests
 test "Empty roundtrip" := do
-  ensure (← testRoundTrip Empty.mk) "Empty should round-trip"
+  (← testRoundTrip Empty.mk) ≡ true
 
 -- Timestamp tests
 test "Timestamp roundtrip" := do
   let ts := Timestamp.fromSecondsNanos 1702857600 500000000
-  ensure (← testRoundTrip ts) "Timestamp should round-trip"
+  (← testRoundTrip ts) ≡ true
 
 test "Timestamp zero encodes to empty" := do
   let ts : Timestamp := {}
   let bytes := encodeMessage ts
-  ensure (bytes.size == 0) s!"Empty timestamp should encode to zero bytes, got {bytes.size}"
+  bytes.size ≡ 0
 
 test "Timestamp fromSeconds works" := do
   let ts := Timestamp.fromSeconds 12345
-  ensure (ts.seconds == 12345 && ts.nanos == 0) "Timestamp.fromSeconds should work"
+  ts.seconds ≡ 12345
+  ts.nanos ≡ 0
 
 test "Timestamp isValid detects valid" := do
   let ts := Timestamp.fromSeconds 12345
-  ensure ts.isValid "Valid timestamp should pass isValid"
+  ts.isValid ≡ true
 
 test "Timestamp isValid detects invalid" := do
   let invalidTs := { seconds := 100, nanos := -1 : Timestamp }
-  ensure (!invalidTs.isValid) "Invalid timestamp should not pass isValid"
+  invalidTs.isValid ≡ false
 
 -- Duration tests
 test "Duration roundtrip" := do
   let d := Duration.fromSecondsNanos 120 500000000
-  ensure (← testRoundTrip d) "Duration should round-trip"
+  (← testRoundTrip d) ≡ true
 
 test "Duration zero encodes to empty" := do
   let d : Duration := {}
   let bytes := encodeMessage d
-  ensure (bytes.size == 0) s!"Empty duration should encode to zero bytes, got {bytes.size}"
+  bytes.size ≡ 0
 
 test "Duration fromSeconds works" := do
   let d := Duration.fromSeconds 10
-  ensure (d.seconds == 10 && d.nanos == 0) "Duration.fromSeconds should work"
+  d.seconds ≡ 10
+  d.nanos ≡ 0
 
 test "Duration fromMillis works" := do
   let d := Duration.fromMillis 2500
-  ensure (d.seconds == 2 && d.nanos == 500000000) s!"Duration.fromMillis got {d.seconds}s {d.nanos}ns"
+  d.seconds ≡ 2
+  d.nanos ≡ 500000000
 
 test "Duration negation works" := do
   let d := Duration.fromSeconds 10
   let negD := -d
-  ensure (negD.seconds == -10 && negD.nanos == 0) "Duration negation should work"
+  negD.seconds ≡ -10
+  negD.nanos ≡ 0
 
 test "Duration addition works" := do
   let d1 := Duration.fromSeconds 10
   let d2 := Duration.fromMillis 2500
   let sum := d1 + d2
-  ensure (sum.seconds == 12 && sum.nanos == 500000000) s!"Duration add got {sum.seconds}s {sum.nanos}ns"
+  sum.seconds ≡ 12
+  sum.nanos ≡ 500000000
 
 -- Wrapper type tests
 test "DoubleValue roundtrip" := do
-  ensure (← testRoundTrip { value := 3.14159 : DoubleValue }) "DoubleValue should round-trip"
+  (← testRoundTrip { value := 3.14159 : DoubleValue }) ≡ true
 
 test "FloatValue roundtrip" := do
-  ensure (← testRoundTrip { value := 0.5 : FloatValue }) "FloatValue should round-trip"
+  (← testRoundTrip { value := 0.5 : FloatValue }) ≡ true
 
 test "Int64Value roundtrip" := do
-  ensure (← testRoundTrip { value := -9223372036854775808 : Int64Value }) "Int64Value should round-trip"
+  (← testRoundTrip { value := -9223372036854775808 : Int64Value }) ≡ true
 
 test "UInt64Value roundtrip" := do
-  ensure (← testRoundTrip { value := 18446744073709551615 : UInt64Value }) "UInt64Value should round-trip"
+  (← testRoundTrip { value := 18446744073709551615 : UInt64Value }) ≡ true
 
 test "Int32Value roundtrip" := do
-  ensure (← testRoundTrip { value := -2147483648 : Int32Value }) "Int32Value should round-trip"
+  (← testRoundTrip { value := -2147483648 : Int32Value }) ≡ true
 
 test "UInt32Value roundtrip" := do
-  ensure (← testRoundTrip { value := 4294967295 : UInt32Value }) "UInt32Value should round-trip"
+  (← testRoundTrip { value := 4294967295 : UInt32Value }) ≡ true
 
 test "BoolValue true roundtrip" := do
-  ensure (← testRoundTrip { value := true : BoolValue }) "BoolValue(true) should round-trip"
+  (← testRoundTrip { value := true : BoolValue }) ≡ true
 
 test "BoolValue false roundtrip" := do
-  ensure (← testRoundTrip { value := false : BoolValue }) "BoolValue(false) should round-trip"
+  (← testRoundTrip { value := false : BoolValue }) ≡ true
 
 test "StringValue roundtrip" := do
-  ensure (← testRoundTrip { value := "Hello, Protocol Buffers!" : StringValue }) "StringValue should round-trip"
+  (← testRoundTrip { value := "Hello, Protocol Buffers!" : StringValue }) ≡ true
 
 test "BytesValue roundtrip" := do
   let bytes := ByteArray.mk #[0x01, 0x02, 0x03, 0xFF]
-  ensure (← testRoundTrip { value := bytes : BytesValue }) "BytesValue should round-trip"
+  (← testRoundTrip { value := bytes : BytesValue }) ≡ true
 
 test "wrapper defaults encode to empty" := do
   let tests : List (String × ByteArray) := [
@@ -118,33 +123,32 @@ test "wrapper defaults encode to empty" := do
     ("StringValue", encodeMessage ({} : StringValue)),
     ("BytesValue", encodeMessage ({} : BytesValue))
   ]
-  for (name, bytes) in tests do
-    ensure (bytes.size == 0) s!"{name} default should encode to 0 bytes, got {bytes.size}"
+  for (_, bytes) in tests do
+    bytes.size ≡ 0
 
 -- Registry tests
 test "Timestamp is wellknown type" := do
-  ensure (WellKnown.isWellKnownType "google.protobuf.Timestamp") "Timestamp should be a well-known type"
+  (WellKnown.isWellKnownType "google.protobuf.Timestamp") ≡ true
 
 test "StringValue is wellknown type" := do
-  ensure (WellKnown.isWellKnownType "google.protobuf.StringValue") "StringValue should be a well-known type"
+  (WellKnown.isWellKnownType "google.protobuf.StringValue") ≡ true
 
 test "custom type is not wellknown" := do
-  ensure (!WellKnown.isWellKnownType "foo.bar.MyMessage") "foo.bar.MyMessage should NOT be a well-known type"
+  (WellKnown.isWellKnownType "foo.bar.MyMessage") ≡ false
 
 test "Duration has Lean name" := do
   match WellKnown.getLeanName "google.protobuf.Duration" with
-  | some name =>
-    ensure (name == "Google.Protobuf.Duration") s!"Expected 'Google.Protobuf.Duration', got '{name}'"
+  | some name => name ≡ "Google.Protobuf.Duration"
   | none => ensure false "Duration should have a Lean name"
 
 test "timestamp proto is wellknown import" := do
-  ensure (WellKnown.isWellKnownImport "google/protobuf/timestamp.proto") "google/protobuf/timestamp.proto should be a well-known import"
+  (WellKnown.isWellKnownImport "google/protobuf/timestamp.proto") ≡ true
 
 test "wrappers proto is wellknown import" := do
-  ensure (WellKnown.isWellKnownImport "google/protobuf/wrappers.proto") "google/protobuf/wrappers.proto should be a well-known import"
+  (WellKnown.isWellKnownImport "google/protobuf/wrappers.proto") ≡ true
 
 test "custom proto is not wellknown import" := do
-  ensure (!WellKnown.isWellKnownImport "myapp/messages.proto") "myapp/messages.proto should NOT be a well-known import"
+  (WellKnown.isWellKnownImport "myapp/messages.proto") ≡ false
 
 #generate_tests
 

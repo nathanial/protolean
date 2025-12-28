@@ -31,15 +31,15 @@ testSuite "Import Tests"
 
 test "encode TestMessage produces bytes" := do
   let bytes := Protolean.encodeMessage testMessage
-  ensure (bytes.size > 0) "Encoding should produce bytes"
+  (bytes.size != 0) ≡ true
 
 test "TestMessage roundtrip" := do
   let bytes := Protolean.encodeMessage testMessage
   match Protolean.decodeMessage bytes with
-  | .ok (decoded : TestMessage) =>
-    ensure (decoded.name == testMessage.name) "name should match"
-    ensure (decoded.value == testMessage.value) "value should match"
-    ensure (decoded.active == testMessage.active) "active should match"
+  | .ok (decoded : TestMessage) => do
+    decoded.name ≡ testMessage.name
+    decoded.value ≡ testMessage.value
+    decoded.active ≡ testMessage.active
   | .error _ => ensure false "Decode failed"
 
 #generate_tests

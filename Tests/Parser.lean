@@ -25,13 +25,13 @@ message Person {
 }
 "
   match parse input with
-  | .ok file =>
-    ensure (file.protoSyntax == "proto3") "syntax should be proto3"
-    ensure (file.definitions.length == 1) "expected 1 definition"
+  | .ok file => do
+    file.protoSyntax ≡ "proto3"
+    file.definitions.length ≡ 1
     match file.definitions.head? with
-    | some (.message msg) =>
-      ensure (msg.name == "Person") "message name should be Person"
-      ensure (msg.fields.length == 2) "expected 2 fields"
+    | some (.message msg) => do
+      msg.name ≡ "Person"
+      msg.fields.length ≡ 2
     | _ => ensure false "expected message definition"
   | .error _ => ensure false "parse failed"
 
@@ -48,9 +48,9 @@ enum Status {
   match parse input with
   | .ok file =>
     match file.definitions.head? with
-    | some (.enum e) =>
-      ensure (e.name == "Status") "enum name should be Status"
-      ensure (e.values.length == 3) "expected 3 values"
+    | some (.enum e) => do
+      e.name ≡ "Status"
+      e.values.length ≡ 3
     | _ => ensure false "expected enum definition"
   | .error _ => ensure false "parse failed"
 
@@ -79,8 +79,7 @@ message AllTypes {
   match parse input with
   | .ok file =>
     match file.definitions.head? with
-    | some (.message msg) =>
-      ensure (msg.fields.length == 15) "expected 15 fields"
+    | some (.message msg) => msg.fields.length ≡ 15
     | _ => ensure false "expected message definition"
   | .error _ => ensure false "parse failed"
 
@@ -98,7 +97,7 @@ message Container {
     match file.definitions.head? with
     | some (.message msg) =>
       let allRepeated := msg.fields.all (·.cardinality == .repeated)
-      ensure allRepeated "all fields should be repeated"
+      allRepeated ≡ true
     | _ => ensure false "expected message definition"
   | .error _ => ensure false "parse failed"
 
@@ -116,12 +115,12 @@ message Contact {
   match parse input with
   | .ok file =>
     match file.definitions.head? with
-    | some (.message msg) =>
-      ensure (msg.oneofs.length == 1) "expected 1 oneof"
+    | some (.message msg) => do
+      msg.oneofs.length ≡ 1
       match msg.oneofs.head? with
-      | some oneof =>
-        ensure (oneof.name == "contact_type") "oneof name should be contact_type"
-        ensure (oneof.fields.length == 2) "expected 2 fields in oneof"
+      | some oneof => do
+        oneof.name ≡ "contact_type"
+        oneof.fields.length ≡ 2
       | none => ensure false "no oneof found"
     | _ => ensure false "expected message definition"
   | .error _ => ensure false "parse failed"
@@ -161,8 +160,7 @@ message Outer {
   match parse input with
   | .ok file =>
     match file.definitions.head? with
-    | some (.message msg) =>
-      ensure (msg.nestedMessages.length == 1) "expected 1 nested message"
+    | some (.message msg) => msg.nestedMessages.length ≡ 1
     | _ => ensure false "expected message definition"
   | .error _ => ensure false "parse failed"
 
@@ -180,13 +178,12 @@ message MyMessage {
 }
 "
   match parse input with
-  | .ok file =>
-    ensure file.package.isSome "expected package"
+  | .ok file => do
+    file.package.isSome ≡ true
     match file.package with
-    | some pkg =>
-      ensure (pkg.parts == ["example", "v1"]) "package should be example.v1"
+    | some pkg => pkg.parts ≡ ["example", "v1"]
     | none => pure ()
-    ensure (file.imports.length == 2) "expected 2 imports"
+    file.imports.length ≡ 2
   | .error _ => ensure false "parse failed"
 
 test "parse top level option" := do
@@ -200,11 +197,10 @@ message Foo {
 }
 "
   match parse input with
-  | .ok file =>
-    ensure (file.options.length == 1) "expected 1 option"
+  | .ok file => do
+    file.options.length ≡ 1
     match file.options.head? with
-    | some opt =>
-      ensure (opt.name == "java_package") "option name should be java_package"
+    | some opt => opt.name ≡ "java_package"
     | none => ensure false "no options found"
   | .error _ => ensure false "parse failed"
 
@@ -219,14 +215,13 @@ message Foo {
 }
 "
   match parse input with
-  | .ok file =>
-    ensure (file.options.length == 1) "expected 1 option"
+  | .ok file => do
+    file.options.length ≡ 1
     match file.options.head? with
-    | some opt =>
-      ensure (opt.name == "go_package") "option name should be go_package"
+    | some opt => do
+      opt.name ≡ "go_package"
       match opt.value with
-      | .string s =>
-        ensure (s == "github.com/example/pb") "option value should be github.com/example/pb"
+      | .string s => s ≡ "github.com/example/pb"
       | _ => ensure false "option value should be string"
     | none => ensure false "no options found"
   | .error _ => ensure false "parse failed"
@@ -248,15 +243,14 @@ service SearchService {
 }
 "
   match parse input with
-  | .ok file =>
-    ensure (file.definitions.length == 3) "expected 3 definitions"
+  | .ok file => do
+    file.definitions.length ≡ 3
     match file.definitions[2]? with
-    | some (TopLevelDef.service svc) =>
-      ensure (svc.name == "SearchService") "service name should be SearchService"
-      ensure (svc.methods.length == 1) "expected 1 method"
+    | some (TopLevelDef.service svc) => do
+      svc.name ≡ "SearchService"
+      svc.methods.length ≡ 1
       match svc.methods.head? with
-      | some m =>
-        ensure (m.name == "Search") "method name should be Search"
+      | some m => m.name ≡ "Search"
       | none => ensure false "no methods found"
     | _ => ensure false "expected service definition"
   | .error _ => ensure false "parse failed"
@@ -278,22 +272,25 @@ service StreamService {
   match parse input with
   | .ok file =>
     match file.definitions[1]? with
-    | some (TopLevelDef.service svc) =>
-      ensure (svc.methods.length == 3) "expected 3 methods"
+    | some (TopLevelDef.service svc) => do
+      svc.methods.length ≡ 3
       -- Check ClientStream
       match svc.methods[0]? with
-      | some m =>
-        ensure (m.inputStream && !m.outputStream) "ClientStream should have inputStream=true, outputStream=false"
+      | some m => do
+        m.inputStream ≡ true
+        m.outputStream ≡ false
       | none => ensure false "ClientStream not found"
       -- Check ServerStream
       match svc.methods[1]? with
-      | some m =>
-        ensure (!m.inputStream && m.outputStream) "ServerStream should have inputStream=false, outputStream=true"
+      | some m => do
+        m.inputStream ≡ false
+        m.outputStream ≡ true
       | none => ensure false "ServerStream not found"
       -- Check BidiStream
       match svc.methods[2]? with
-      | some m =>
-        ensure (m.inputStream && m.outputStream) "BidiStream should have both streams true"
+      | some m => do
+        m.inputStream ≡ true
+        m.outputStream ≡ true
       | none => ensure false "BidiStream not found"
     | _ => ensure false "expected service definition"
   | .error _ => ensure false "parse failed"
@@ -317,7 +314,7 @@ test "keyword escaping" := do
   ]
   for (input, expected) in tests do
     let result := protoFieldToLean input
-    ensure (result == expected) s!"protoFieldToLean \"{input}\" = \"{result}\", expected \"{expected}\""
+    result ≡ expected
 
 #generate_tests
 

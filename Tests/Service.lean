@@ -30,30 +30,32 @@ testSuite "Service Tests"
 
 test "ServiceInfo has correct name" := do
   let info := Test.Service.testServiceInfo
-  ensure (info.name == "TestService") s!"Expected 'TestService', got '{info.name}'"
+  info.name ≡ "TestService"
 
 test "ServiceInfo has correct fullName" := do
   let info := Test.Service.testServiceInfo
-  ensure (info.fullName == "test.service.TestService") s!"Expected 'test.service.TestService', got '{info.fullName}'"
+  info.fullName ≡ "test.service.TestService"
 
 test "ServiceInfo has correct method count" := do
   let info := Test.Service.testServiceInfo
-  ensure (info.methods.length == 2) s!"Expected 2 methods, got {info.methods.length}"
+  info.methods.length ≡ 2
 
 test "Search method is unary" := do
   let info := Test.Service.testServiceInfo
   match info.findMethod "Search" with
-  | some m =>
-    ensure (!m.inputStream && !m.outputStream) "Search should be unary (no streaming)"
-    ensure (m.kind == RpcKind.unary) s!"Search kind should be unary, got {m.kind}"
+  | some m => do
+    m.inputStream ≡ false
+    m.outputStream ≡ false
+    m.kind ≡ RpcKind.unary
   | none => ensure false "Search method not found"
 
 test "StreamResults method is server streaming" := do
   let info := Test.Service.testServiceInfo
   match info.findMethod "StreamResults" with
-  | some m =>
-    ensure (!m.inputStream && m.outputStream) "StreamResults should have outputStream=true only"
-    ensure (m.kind == RpcKind.serverStream) s!"StreamResults kind should be serverStream, got {m.kind}"
+  | some m => do
+    m.inputStream ≡ false
+    m.outputStream ≡ true
+    m.kind ≡ RpcKind.serverStream
   | none => ensure false "StreamResults method not found"
 
 test "TestServiceClient type class exists" := do
@@ -63,11 +65,11 @@ test "TestServiceClient type class exists" := do
 
 test "mock search returns correct result" := do
   let response ← Test.Service.TestServiceClient.search sampleRequest
-  ensure (response.result == "Echo: test query") s!"Mock search returned wrong result: {response.result}"
+  response.result ≡ "Echo: test query"
 
 test "mock streamResults returns correct count" := do
   let responses ← Test.Service.TestServiceClient.streamResults sampleRequest
-  ensure (responses.size == 2) s!"Mock streamResults returned wrong count: {responses.size}"
+  responses.size ≡ 2
 
 #generate_tests
 

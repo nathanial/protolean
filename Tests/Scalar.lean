@@ -24,89 +24,89 @@ testSuite "Scalar Tests"
 
 -- UInt32 tests
 test "UInt32 roundtrip 0" := do
-  ensure (← testRoundTrip (0 : UInt32)) "0 should round-trip"
+  (← testRoundTrip (0 : UInt32)) ≡ true
 
 test "UInt32 roundtrip 1" := do
-  ensure (← testRoundTrip (1 : UInt32)) "1 should round-trip"
+  (← testRoundTrip (1 : UInt32)) ≡ true
 
 test "UInt32 roundtrip 127" := do
-  ensure (← testRoundTrip (127 : UInt32)) "127 should round-trip"
+  (← testRoundTrip (127 : UInt32)) ≡ true
 
 test "UInt32 roundtrip 128" := do
-  ensure (← testRoundTrip (128 : UInt32)) "128 should round-trip"
+  (← testRoundTrip (128 : UInt32)) ≡ true
 
 test "UInt32 roundtrip max" := do
-  ensure (← testRoundTrip (0xFFFFFFFF : UInt32)) "max UInt32 should round-trip"
+  (← testRoundTrip (0xFFFFFFFF : UInt32)) ≡ true
 
 -- UInt64 tests
 test "UInt64 roundtrip 0" := do
-  ensure (← testRoundTrip (0 : UInt64)) "0 should round-trip"
+  (← testRoundTrip (0 : UInt64)) ≡ true
 
 test "UInt64 roundtrip max" := do
-  ensure (← testRoundTrip (0xFFFFFFFFFFFFFFFF : UInt64)) "max UInt64 should round-trip"
+  (← testRoundTrip (0xFFFFFFFFFFFFFFFF : UInt64)) ≡ true
 
 -- Int32 tests
 test "Int32 roundtrip 0" := do
-  ensure (← testRoundTrip (0 : Int32)) "0 should round-trip"
+  (← testRoundTrip (0 : Int32)) ≡ true
 
 test "Int32 roundtrip pos1" := do
-  ensure (← testRoundTrip (1 : Int32)) "1 should round-trip"
+  (← testRoundTrip (1 : Int32)) ≡ true
 
 test "Int32 roundtrip neg1" := do
-  ensure (← testRoundTrip ((-1) : Int32)) "-1 should round-trip"
+  (← testRoundTrip ((-1) : Int32)) ≡ true
 
 test "Int32 roundtrip max" := do
-  ensure (← testRoundTrip (2147483647 : Int32)) "max Int32 should round-trip"
+  (← testRoundTrip (2147483647 : Int32)) ≡ true
 
 test "Int32 roundtrip min" := do
-  ensure (← testRoundTrip ((-2147483648) : Int32)) "min Int32 should round-trip"
+  (← testRoundTrip ((-2147483648) : Int32)) ≡ true
 
 -- Int64 tests
 test "Int64 roundtrip 0" := do
-  ensure (← testRoundTrip (0 : Int64)) "0 should round-trip"
+  (← testRoundTrip (0 : Int64)) ≡ true
 
 test "Int64 roundtrip neg1" := do
-  ensure (← testRoundTrip ((-1) : Int64)) "-1 should round-trip"
+  (← testRoundTrip ((-1) : Int64)) ≡ true
 
 -- Bool tests
 test "Bool roundtrip false" := do
-  ensure (← testRoundTrip false) "false should round-trip"
+  (← testRoundTrip false) ≡ true
 
 test "Bool roundtrip true" := do
-  ensure (← testRoundTrip true) "true should round-trip"
+  (← testRoundTrip true) ≡ true
 
 -- String tests
 test "String roundtrip empty" := do
-  ensure (← testRoundTrip "") "empty string should round-trip"
+  (← testRoundTrip "") ≡ true
 
 test "String roundtrip hello" := do
-  ensure (← testRoundTrip "hello") "hello should round-trip"
+  (← testRoundTrip "hello") ≡ true
 
 test "String roundtrip unicode" := do
-  ensure (← testRoundTrip "Hello, 世界!") "unicode string should round-trip"
+  (← testRoundTrip "Hello, 世界!") ≡ true
 
 -- ByteArray tests
 test "ByteArray roundtrip empty" := do
-  ensure (← testRoundTrip ByteArray.empty) "empty ByteArray should round-trip"
+  (← testRoundTrip ByteArray.empty) ≡ true
 
 test "ByteArray roundtrip data" := do
-  ensure (← testRoundTrip (ByteArray.mk #[1, 2, 3, 4, 5])) "ByteArray should round-trip"
+  (← testRoundTrip (ByteArray.mk #[1, 2, 3, 4, 5])) ≡ true
 
 -- Default value detection tests
 test "UInt32 zero is default" := do
-  ensure (ProtoEncodable.isDefault (0 : UInt32)) "0 should be default"
+  (ProtoEncodable.isDefault (0 : UInt32)) ≡ true
 
 test "Int32 zero is default" := do
-  ensure (ProtoEncodable.isDefault (0 : Int32)) "0 should be default"
+  (ProtoEncodable.isDefault (0 : Int32)) ≡ true
 
 test "Bool false is default" := do
-  ensure (ProtoEncodable.isDefault false) "false should be default"
+  (ProtoEncodable.isDefault false) ≡ true
 
 test "String empty is default" := do
-  ensure (ProtoEncodable.isDefault "") "empty string should be default"
+  (ProtoEncodable.isDefault "") ≡ true
 
 test "ByteArray empty is default" := do
-  ensure (ProtoEncodable.isDefault ByteArray.empty) "empty ByteArray should be default"
+  (ProtoEncodable.isDefault ByteArray.empty) ≡ true
 
 #generate_tests
 
