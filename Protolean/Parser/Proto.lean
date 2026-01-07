@@ -1,13 +1,12 @@
 /-
-  Complete Proto3 parser.
+  Complete Proto3 parser using Sift.
 -/
 import Protolean.Parser.Lexer
 import Protolean.Syntax.AST
 
 namespace Protolean.Parser
 
-open Std.Internal.Parsec
-open Std.Internal.Parsec.String
+open Sift
 open Protolean.Syntax
 
 /-- Parse a scalar type keyword -/
@@ -29,7 +28,7 @@ def scalarType : Parser ScalarType := do
   | "bool" => pure .bool
   | "string" => pure .string
   | "bytes" => pure .bytes
-  | _ => fail s!"expected scalar type, got '{id}'"
+  | _ => Parser.fail s!"expected scalar type, got '{id}'"
 
 /-- Parse a map key type -/
 def mapKeyType : Parser MapKeyType := do
@@ -47,7 +46,7 @@ def mapKeyType : Parser MapKeyType := do
   | "sfixed64" => pure .sfixed64
   | "bool" => pure .bool
   | "string" => pure .string
-  | _ => fail s!"invalid map key type: '{id}'"
+  | _ => Parser.fail s!"invalid map key type: '{id}'"
 
 /-- Parse a field type (scalar, map, or named reference) -/
 partial def fieldType : Parser FieldType := do
@@ -145,7 +144,7 @@ def reserved : Parser Reserved := do
 where
   rangeSpec : Parser (Int × Option Int) := do
     let start ← intLit
-    let end_ ← optional (attempt do
+    let end_ ← Sift.optional (attempt do
       keyword "to"
       (attempt do keyword "max"; pure none) <|>
       (do pure (some (← intLit))))
@@ -232,7 +231,7 @@ def syntaxDecl : Parser String := do
   let syn ← stringLit
   symbol ";"
   if syn != "proto3" then
-    fail s!"expected 'proto3', got '{syn}'"
+    Parser.fail s!"expected 'proto3', got '{syn}'"
   pure syn
 
 /-- Parse package declaration -/
@@ -273,12 +272,12 @@ where
     keyword "rpc"
     let name ← ident
     symbol "("
-    let inStream ← optional (keyword "stream")
+    let inStream ← Sift.optional (keyword "stream")
     let inType ← fullIdent
     symbol ")"
     keyword "returns"
     symbol "("
-    let outStream ← optional (keyword "stream")
+    let outStream ← Sift.optional (keyword "stream")
     let outType ← fullIdent
     symbol ")"
     let opts ← rpcOptions
@@ -304,7 +303,7 @@ where
 def protoFile : Parser ProtoFile := do
   ws
   let syn ← syntaxDecl
-  let pkg ← optional (attempt packageDecl)
+  let pkg ← Sift.optional (attempt packageDecl)
   let imports ← many (attempt importDecl)
   let rest ← many topLevelElement
   ws
@@ -328,8 +327,8 @@ where
 
 /-- Main entry point: parse a proto3 file from string -/
 def parse (input : String) : Except String ProtoFile :=
-  match protoFile ⟨input, ⟨⟨0⟩, by simp⟩⟩ with
-  | .success _ file => .ok file
-  | .error _ msg => .error (toString msg)
+  match Parser.run protoFile input with
+  | .ok file => .ok file
+  | .error e => .error s!"Proto parse error at {e.pos.line}:{e.pos.column}: {e.message}"
 
 end Protolean.Parser

@@ -1,33 +1,30 @@
 /-
-  Lexer utilities for Proto3 parsing using Std.Internal.Parsec.
+  Lexer utilities for Proto3 parsing using Sift parser combinators.
 -/
-import Std.Internal.Parsec
-import Std.Internal.Parsec.String
+import Sift
 import Protolean.Syntax.AST
 
 namespace Protolean.Parser
 
-open Std.Internal.Parsec
-open Std.Internal.Parsec.String
+open Sift
 
 /-- Skip single-line comment (// ...) -/
 def lineComment : Parser Unit := do
-  let _ ← pstring "//"
-  let _ ← many (satisfy fun c => c != '\n')
-  let _ ← optional (pchar '\n')
-  pure ()
+  let _ ← string "//"
+  skipWhile (· != '\n')
+  let _ ← Sift.optional (char '\n')
 
 /-- Skip block comment (/* ... */) -/
 partial def blockComment : Parser Unit := do
-  let _ ← pstring "/*"
+  let _ ← string "/*"
   skipUntilClose
 where
   skipUntilClose : Parser Unit := do
-    let c ← any
+    let c ← anyChar
     if c == '*' then
-      let next ← peek?
+      let next ← peek
       if next == some '/' then
-        let _ ← any
+        let _ ← anyChar
         pure ()
       else
         skipUntilClose
@@ -55,7 +52,7 @@ def fullIdent : Parser (List String) := do
   let first ← ident
   let rest ← many (attempt do
     ws
-    let _ ← pchar '.'
+    let _ ← char '.'
     ident)
   pure (first :: rest.toList)
 
@@ -64,12 +61,12 @@ def keyword (kw : String) : Parser Unit := attempt do
   ws
   let id ← ident
   if id == kw then pure ()
-  else fail s!"expected keyword '{kw}', got '{id}'"
+  else Parser.fail s!"expected keyword '{kw}', got '{id}'"
 
 /-- Parse a decimal integer -/
 def decimalLit : Parser Int := do
   ws
-  let sign ← optional (pchar '-')
+  let sign ← Sift.optional (char '-')
   let first ← satisfy Char.isDigit
   let rest ← manyChars (satisfy Char.isDigit)
   let digits := first.toString ++ rest
@@ -79,8 +76,8 @@ def decimalLit : Parser Int := do
 /-- Parse a hex integer (0x...) -/
 def hexLit : Parser Int := attempt do
   ws
-  let sign ← optional (pchar '-')
-  let _ ← pstring "0x" <|> pstring "0X"
+  let sign ← Sift.optional (char '-')
+  let _ ← string "0x" <|> string "0X"
   let digits ← many1Chars hexDigit
   let value := digits.foldl (fun acc c => acc * 16 + hexDigitValue c) 0
   pure (if sign.isSome then -value else value)
@@ -93,8 +90,8 @@ where
 /-- Parse an octal integer (0...) -/
 def octalLit : Parser Int := attempt do
   ws
-  let sign ← optional (pchar '-')
-  let _ ← pchar '0'
+  let sign ← Sift.optional (char '-')
+  let _ ← char '0'
   let digits ← many1Chars (satisfy fun c => '0' ≤ c && c ≤ '7')
   let value := digits.foldl (fun acc c => acc * 8 + (c.toNat - '0'.toNat)) 0
   pure (if sign.isSome then -value else value)
@@ -106,13 +103,13 @@ def intLit : Parser Int :=
 /-- Parse a float literal -/
 def floatLit : Parser Float := do
   ws
-  let sign ← optional (pchar '-')
+  let sign ← Sift.optional (char '-')
   let intPart ← manyChars (satisfy Char.isDigit)
-  let _ ← pchar '.'
+  let _ ← char '.'
   let fracPart ← manyChars (satisfy Char.isDigit)
-  let expPart ← optional do
+  let expPart ← Sift.optional do
     let _ ← satisfy fun c => c == 'e' || c == 'E'
-    let expSign ← optional (satisfy fun c => c == '+' || c == '-')
+    let expSign ← Sift.optional (satisfy fun c => c == '+' || c == '-')
     let expDigits ← many1Chars (satisfy Char.isDigit)
     pure (expSign, expDigits)
   let numStr := (if sign.isSome then "-" else "") ++ intPart ++ "." ++ fracPart ++
@@ -157,17 +154,17 @@ def stringLit : Parser String := do
   ws
   let quote ← satisfy fun c => c == '"' || c == '\''
   let chars ← manyChars (stringChar quote)
-  let _ ← pchar quote
+  let _ ← char quote
   pure chars
 where
   stringChar (quote : Char) : Parser Char :=
     (attempt do
-      let _ ← pchar '\\'
+      let _ ← char '\\'
       escapeChar) <|>
     satisfy fun c => c != quote && c != '\\'
 
   escapeChar : Parser Char := do
-    let c ← any
+    let c ← anyChar
     match c with
     | 'n' => pure '\n'
     | 't' => pure '\t'
@@ -180,7 +177,7 @@ where
       let d1 ← hexDigit
       let d2 ← hexDigit
       pure (Char.ofNat (hexVal d1 * 16 + hexVal d2))
-    | _ => fail s!"invalid escape sequence: \\{c}"
+    | _ => Parser.fail s!"invalid escape sequence: \\{c}"
 
   hexVal (c : Char) : Nat :=
     if '0' ≤ c && c ≤ '9' then c.toNat - '0'.toNat
@@ -190,7 +187,7 @@ where
 /-- Parse a punctuation symbol -/
 def symbol (s : String) : Parser Unit := do
   ws
-  let _ ← pstring s
+  let _ ← string s
   pure ()
 
 /-- Parse with items separated by a delimiter -/
@@ -202,5 +199,10 @@ def sepBy1 (p : Parser α) (sep : Parser Unit) : Parser (List α) := do
 /-- Parse with items separated by a delimiter (zero or more) -/
 def sepBy (p : Parser α) (sep : Parser Unit) : Parser (List α) :=
   sepBy1 p sep <|> pure []
+
+/-- End of input -/
+def eof : Parser Unit := do
+  if ← atEnd then pure ()
+  else Parser.fail "expected end of input"
 
 end Protolean.Parser
