@@ -9,17 +9,17 @@ namespace Protolean.Parser
 open Sift
 
 /-- Skip single-line comment (// ...) -/
-def lineComment : Parser Unit := do
+def lineComment : Parser Unit Unit := do
   let _ ← string "//"
   skipWhile (· != '\n')
   let _ ← Sift.optional (char '\n')
 
 /-- Skip block comment (/* ... */) -/
-partial def blockComment : Parser Unit := do
+partial def blockComment : Parser Unit Unit := do
   let _ ← string "/*"
   skipUntilClose
 where
-  skipUntilClose : Parser Unit := do
+  skipUntilClose : Parser Unit Unit := do
     let c ← anyChar
     if c == '*' then
       let next ← peek
@@ -32,23 +32,23 @@ where
       skipUntilClose
 
 /-- Skip whitespace and comments -/
-partial def ws : Parser Unit := do
+partial def ws : Parser Unit Unit := do
   let _ ← many (wsChar <|> attempt lineComment <|> attempt blockComment)
   pure ()
 where
-  wsChar : Parser Unit := do
+  wsChar : Parser Unit Unit := do
     let _ ← satisfy fun c => c == ' ' || c == '\t' || c == '\n' || c == '\r'
     pure ()
 
 /-- Parse an identifier -/
-def ident : Parser String := do
+def ident : Parser Unit String := do
   ws
   let first ← satisfy fun c => c.isAlpha || c == '_'
   let rest ← manyChars (satisfy fun c => c.isAlphanum || c == '_')
   pure (first.toString ++ rest)
 
 /-- Parse a full identifier (dot-separated) -/
-def fullIdent : Parser (List String) := do
+def fullIdent : Parser Unit (List String) := do
   let first ← ident
   let rest ← many (attempt do
     ws
@@ -57,14 +57,14 @@ def fullIdent : Parser (List String) := do
   pure (first :: rest.toList)
 
 /-- Check if identifier matches a keyword -/
-def keyword (kw : String) : Parser Unit := attempt do
+def keyword (kw : String) : Parser Unit Unit := attempt do
   ws
   let id ← ident
   if id == kw then pure ()
   else Parser.fail s!"expected keyword '{kw}', got '{id}'"
 
 /-- Parse a decimal integer -/
-def decimalLit : Parser Int := do
+def decimalLit : Parser Unit Int := do
   ws
   let sign ← Sift.optional (char '-')
   let first ← satisfy Char.isDigit
@@ -74,7 +74,7 @@ def decimalLit : Parser Int := do
   pure (if sign.isSome then -value else value)
 
 /-- Parse a hex integer (0x...) -/
-def hexLit : Parser Int := attempt do
+def hexLit : Parser Unit Int := attempt do
   ws
   let sign ← Sift.optional (char '-')
   let _ ← string "0x" <|> string "0X"
@@ -88,7 +88,7 @@ where
     else c.toNat - 'A'.toNat + 10
 
 /-- Parse an octal integer (0...) -/
-def octalLit : Parser Int := attempt do
+def octalLit : Parser Unit Int := attempt do
   ws
   let sign ← Sift.optional (char '-')
   let _ ← char '0'
@@ -97,11 +97,11 @@ def octalLit : Parser Int := attempt do
   pure (if sign.isSome then -value else value)
 
 /-- Parse an integer literal (hex, octal, or decimal) -/
-def intLit : Parser Int :=
+def intLit : Parser Unit Int :=
   hexLit <|> octalLit <|> decimalLit
 
 /-- Parse a float literal -/
-def floatLit : Parser Float := do
+def floatLit : Parser Unit Float := do
   ws
   let sign ← Sift.optional (char '-')
   let intPart ← manyChars (satisfy Char.isDigit)
@@ -150,20 +150,20 @@ where
     if negative then -result else result
 
 /-- Parse a string literal (single or double quoted) -/
-def stringLit : Parser String := do
+def stringLit : Parser Unit String := do
   ws
   let quote ← satisfy fun c => c == '"' || c == '\''
   let chars ← manyChars (stringChar quote)
   let _ ← char quote
   pure chars
 where
-  stringChar (quote : Char) : Parser Char :=
+  stringChar (quote : Char) : Parser Unit Char :=
     (attempt do
       let _ ← char '\\'
       escapeChar) <|>
     satisfy fun c => c != quote && c != '\\'
 
-  escapeChar : Parser Char := do
+  escapeChar : Parser Unit Char := do
     let c ← anyChar
     match c with
     | 'n' => pure '\n'
@@ -185,23 +185,23 @@ where
     else c.toNat - 'A'.toNat + 10
 
 /-- Parse a punctuation symbol -/
-def symbol (s : String) : Parser Unit := do
+def symbol (s : String) : Parser Unit Unit := do
   ws
   let _ ← string s
   pure ()
 
 /-- Parse with items separated by a delimiter -/
-def sepBy1 (p : Parser α) (sep : Parser Unit) : Parser (List α) := do
+def sepBy1 (p : Parser Unit α) (sep : Parser Unit Unit) : Parser Unit (List α) := do
   let first ← p
   let rest ← many (attempt do sep; p)
   pure (first :: rest.toList)
 
 /-- Parse with items separated by a delimiter (zero or more) -/
-def sepBy (p : Parser α) (sep : Parser Unit) : Parser (List α) :=
+def sepBy (p : Parser Unit α) (sep : Parser Unit Unit) : Parser Unit (List α) :=
   sepBy1 p sep <|> pure []
 
 /-- End of input -/
-def eof : Parser Unit := do
+def eof : Parser Unit Unit := do
   if ← atEnd then pure ()
   else Parser.fail "expected end of input"
 

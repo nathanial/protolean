@@ -10,7 +10,7 @@ open Sift
 open Protolean.Syntax
 
 /-- Parse a scalar type keyword -/
-def scalarType : Parser ScalarType := do
+def scalarType : Parser Unit ScalarType := do
   let id ← ident
   match id with
   | "double" => pure .double
@@ -31,7 +31,7 @@ def scalarType : Parser ScalarType := do
   | _ => Parser.fail s!"expected scalar type, got '{id}'"
 
 /-- Parse a map key type -/
-def mapKeyType : Parser MapKeyType := do
+def mapKeyType : Parser Unit MapKeyType := do
   let id ← ident
   match id with
   | "int32" => pure .int32
@@ -49,7 +49,7 @@ def mapKeyType : Parser MapKeyType := do
   | _ => Parser.fail s!"invalid map key type: '{id}'"
 
 /-- Parse a field type (scalar, map, or named reference) -/
-partial def fieldType : Parser FieldType := do
+partial def fieldType : Parser Unit FieldType := do
   (attempt mapType) <|>
   (attempt do pure (FieldType.scalar (← scalarType))) <|>
   (attempt do
@@ -57,7 +57,7 @@ partial def fieldType : Parser FieldType := do
     pure (FieldType.named ⟨fid⟩))
 where
   /-- Parse a map type: map<KeyType, ValueType> -/
-  mapType : Parser FieldType := do
+  mapType : Parser Unit FieldType := do
     keyword "map"
     symbol "<"
     let keyT ← mapKeyType
@@ -67,7 +67,7 @@ where
     pure (FieldType.map keyT valT)
 
 /-- Parse an option value -/
-def optionValue : Parser OptionValue := do
+def optionValue : Parser Unit OptionValue := do
   (attempt do pure (OptionValue.string (← stringLit))) <|>
   (attempt do
     let f ← floatLit
@@ -80,7 +80,7 @@ def optionValue : Parser OptionValue := do
     else pure (OptionValue.ident ⟨[id]⟩))
 
 /-- Parse field options: [ option, option, ... ] -/
-def fieldOptions : Parser (List ProtoOption) := do
+def fieldOptions : Parser Unit (List ProtoOption) := do
   (attempt do
     symbol "["
     let opts ← sepBy1 fieldOption (symbol ",")
@@ -88,20 +88,20 @@ def fieldOptions : Parser (List ProtoOption) := do
     pure opts) <|>
   pure []
 where
-  fieldOption : Parser ProtoOption := do
+  fieldOption : Parser Unit ProtoOption := do
     let name ← ident
     symbol "="
     let value ← optionValue
     pure ⟨name, value⟩
 
 /-- Parse field cardinality (repeated, optional, or singular) -/
-def fieldCardinality : Parser FieldCardinality := do
+def fieldCardinality : Parser Unit FieldCardinality := do
   (attempt do keyword "repeated"; pure .repeated) <|>
   (attempt do keyword "optional"; pure .optional) <|>
   pure .singular
 
 /-- Parse a regular field definition -/
-def fieldDef : Parser FieldDef := do
+def fieldDef : Parser Unit FieldDef := do
   let card ← fieldCardinality
   let typ ← fieldType
   let name ← ident
@@ -112,7 +112,7 @@ def fieldDef : Parser FieldDef := do
   pure ⟨card, typ, name, num.toNat, opts⟩
 
 /-- Parse a oneof field (no cardinality allowed) -/
-def oneofField : Parser OneofField := do
+def oneofField : Parser Unit OneofField := do
   let typ ← fieldType
   let name ← ident
   symbol "="
@@ -122,7 +122,7 @@ def oneofField : Parser OneofField := do
   pure ⟨typ, name, num.toNat, opts⟩
 
 /-- Parse a oneof definition -/
-def oneofDef : Parser OneofDef := do
+def oneofDef : Parser Unit OneofDef := do
   keyword "oneof"
   let name ← ident
   symbol "{"
@@ -131,7 +131,7 @@ def oneofDef : Parser OneofDef := do
   pure ⟨name, fields.toList, []⟩
 
 /-- Parse reserved ranges or names -/
-def reserved : Parser Reserved := do
+def reserved : Parser Unit Reserved := do
   keyword "reserved"
   (attempt do
     let names ← sepBy1 stringLit (symbol ",")
@@ -142,7 +142,7 @@ def reserved : Parser Reserved := do
     symbol ";"
     pure (Reserved.ranges ranges))
 where
-  rangeSpec : Parser (Int × Option Int) := do
+  rangeSpec : Parser Unit (Int × Option Int) := do
     let start ← intLit
     let end_ ← Sift.optional (attempt do
       keyword "to"
@@ -151,7 +151,7 @@ where
     pure (start, end_.join)
 
 /-- Parse an enum value -/
-def enumValue : Parser EnumValue := do
+def enumValue : Parser Unit EnumValue := do
   let name ← ident
   symbol "="
   let num ← intLit
@@ -160,7 +160,7 @@ def enumValue : Parser EnumValue := do
   pure ⟨name, num, opts⟩
 
 /-- Parse top-level or inline option -/
-def protoOption : Parser ProtoOption := do
+def protoOption : Parser Unit ProtoOption := do
   keyword "option"
   let name ← optionName
   symbol "="
@@ -168,7 +168,7 @@ def protoOption : Parser ProtoOption := do
   symbol ";"
   pure ⟨name, value⟩
 where
-  optionName : Parser String := do
+  optionName : Parser Unit String := do
     -- Handle (extension.name).field or simple.name
     let parts ← many1 (
       (attempt do
@@ -180,7 +180,7 @@ where
     pure (".".intercalate parts.toList)
 
 /-- Parse an enum definition -/
-def enumDef : Parser EnumDef := do
+def enumDef : Parser Unit EnumDef := do
   keyword "enum"
   let name ← ident
   symbol "{"
@@ -189,7 +189,7 @@ def enumDef : Parser EnumDef := do
   let (values, options, reserveds) := categorize elements.toList
   pure ⟨name, values, options, reserveds⟩
 where
-  enumElement : Parser (EnumValue ⊕ ProtoOption ⊕ Reserved) := do
+  enumElement : Parser Unit (EnumValue ⊕ ProtoOption ⊕ Reserved) := do
     (attempt do pure (.inr (.inl (← protoOption)))) <|>
     (attempt do pure (.inr (.inr (← reserved)))) <|>
     (attempt do pure (.inl (← enumValue)))
@@ -206,7 +206,7 @@ where
 -- Message definition and message element are mutually recursive
 mutual
   /-- Parse a message definition (mutually recursive with message element) -/
-  partial def messageDef : Parser MessageDef := do
+  partial def messageDef : Parser Unit MessageDef := do
     keyword "message"
     let name ← ident
     symbol "{"
@@ -215,7 +215,7 @@ mutual
     pure ⟨name, elements.toList⟩
 
   /-- Parse a message element -/
-  partial def messageElement : Parser MessageElement := do
+  partial def messageElement : Parser Unit MessageElement := do
     (attempt do pure (.enum (← enumDef))) <|>
     (attempt do pure (.message (← messageDef))) <|>
     (attempt do pure (.oneof (← oneofDef))) <|>
@@ -225,7 +225,7 @@ mutual
 end
 
 /-- Parse syntax declaration -/
-def syntaxDecl : Parser String := do
+def syntaxDecl : Parser Unit String := do
   keyword "syntax"
   symbol "="
   let syn ← stringLit
@@ -235,27 +235,27 @@ def syntaxDecl : Parser String := do
   pure syn
 
 /-- Parse package declaration -/
-def packageDecl : Parser FullIdent := do
+def packageDecl : Parser Unit FullIdent := do
   keyword "package"
   let pkg ← fullIdent
   symbol ";"
   pure ⟨pkg⟩
 
 /-- Parse import declaration -/
-def importDecl : Parser Import := do
+def importDecl : Parser Unit Import := do
   keyword "import"
   let kind ← importKind
   let path ← stringLit
   symbol ";"
   pure ⟨kind, path⟩
 where
-  importKind : Parser ImportKind := do
+  importKind : Parser Unit ImportKind := do
     (attempt do keyword "public"; pure .public_) <|>
     (attempt do keyword "weak"; pure .weak) <|>
     pure .normal
 
 /-- Parse service definition -/
-def serviceDef : Parser ServiceDef := do
+def serviceDef : Parser Unit ServiceDef := do
   keyword "service"
   let name ← ident
   symbol "{"
@@ -264,11 +264,11 @@ def serviceDef : Parser ServiceDef := do
   let (methods, options) := categorize elements.toList
   pure ⟨name, methods, options⟩
 where
-  serviceElement : Parser (RpcMethod ⊕ ProtoOption) := do
+  serviceElement : Parser Unit (RpcMethod ⊕ ProtoOption) := do
     (attempt do pure (.inl (← rpcMethod))) <|>
     (attempt do pure (.inr (← protoOption)))
 
-  rpcMethod : Parser RpcMethod := do
+  rpcMethod : Parser Unit RpcMethod := do
     keyword "rpc"
     let name ← ident
     symbol "("
@@ -283,7 +283,7 @@ where
     let opts ← rpcOptions
     pure ⟨name, ⟨inType⟩, inStream.isSome, ⟨outType⟩, outStream.isSome, opts⟩
 
-  rpcOptions : Parser (List ProtoOption) := do
+  rpcOptions : Parser Unit (List ProtoOption) := do
     (attempt do
       symbol "{"
       let opts ← many protoOption
@@ -300,7 +300,7 @@ where
     ) ([], [])
 
 /-- Parse a complete proto file -/
-def protoFile : Parser ProtoFile := do
+def protoFile : Parser Unit ProtoFile := do
   ws
   let syn ← syntaxDecl
   let pkg ← Sift.optional (attempt packageDecl)
@@ -311,7 +311,7 @@ def protoFile : Parser ProtoFile := do
   let (defs, opts) := categorize rest.toList
   pure ⟨syn, pkg, imports.toList, opts, defs⟩
 where
-  topLevelElement : Parser (TopLevelDef ⊕ ProtoOption) := do
+  topLevelElement : Parser Unit (TopLevelDef ⊕ ProtoOption) := do
     (attempt do pure (.inl (.message (← messageDef)))) <|>
     (attempt do pure (.inl (.enum (← enumDef)))) <|>
     (attempt do pure (.inl (.service (← serviceDef)))) <|>
