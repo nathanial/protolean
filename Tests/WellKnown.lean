@@ -112,7 +112,7 @@ test "BytesValue roundtrip" := do
   (← testRoundTrip { value := bytes : BytesValue }) ≡ true
 
 test "wrapper defaults encode to empty" := do
-  let tests : List (String × ByteArray) := [
+  let testCases : List (String × ByteArray) := [
     ("DoubleValue", encodeMessage ({} : DoubleValue)),
     ("FloatValue", encodeMessage ({} : FloatValue)),
     ("Int64Value", encodeMessage ({} : Int64Value)),
@@ -123,7 +123,7 @@ test "wrapper defaults encode to empty" := do
     ("StringValue", encodeMessage ({} : StringValue)),
     ("BytesValue", encodeMessage ({} : BytesValue))
   ]
-  for (_, bytes) in tests do
+  for (_, bytes) in testCases do
     bytes.size ≡ 0
 
 -- Registry tests

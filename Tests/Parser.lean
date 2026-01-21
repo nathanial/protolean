@@ -297,7 +297,7 @@ service StreamService {
 
 test "keyword escaping" := do
   -- Test that reserved keywords get escaped with underscore
-  let tests := [
+  let testCases := [
     ("prefix", "prefix_"),
     ("infix", "infix_"),
     ("notation", "notation_"),
@@ -312,7 +312,7 @@ test "keyword escaping" := do
     ("in_progress", "inProgress"),
     ("prefix_value", "prefixValue")
   ]
-  for (input, expected) in tests do
+  for (input, expected) in testCases do
     let result := protoFieldToLean input
     result ≡ expected
 
