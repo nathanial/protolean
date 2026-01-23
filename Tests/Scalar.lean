@@ -108,6 +108,6 @@ test "String empty is default" := do
 test "ByteArray empty is default" := do
   (ProtoEncodable.isDefault ByteArray.empty) ≡ true
 
-#generate_tests
+
 
 end Tests.Scalar

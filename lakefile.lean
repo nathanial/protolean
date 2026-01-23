@@ -4,7 +4,7 @@ open Lake DSL
 package protolean where
   version := v!"0.1.1"
 
-require crucible from git "https://github.com/nathanial/crucible" @ "v0.0.8"
+require crucible from git "https://github.com/nathanial/crucible" @ "v0.0.9"
 require sift from git "https://github.com/nathanial/sift" @ "v0.0.4"
 
 @[default_target]

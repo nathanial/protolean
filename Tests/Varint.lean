@@ -152,6 +152,6 @@ test "zigzag32 for max i32 encodes correctly" := do
   let decoded := zigZagDecode32 encoded
   decoded ≡ 2147483647
 
-#generate_tests
+
 
 end Tests.Varint

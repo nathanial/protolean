@@ -71,6 +71,6 @@ test "mock streamResults returns correct count" := do
   let responses ← Test.Service.TestServiceClient.streamResults sampleRequest
   responses.size ≡ 2
 
-#generate_tests
+
 
 end Tests.Service

@@ -150,6 +150,6 @@ test "wrappers proto is wellknown import" := do
 test "custom proto is not wellknown import" := do
   (WellKnown.isWellKnownImport "myapp/messages.proto") ≡ false
 
-#generate_tests
+
 
 end Tests.WellKnown

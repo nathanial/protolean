@@ -316,6 +316,6 @@ test "keyword escaping" := do
     let result := protoFieldToLean input
     result ≡ expected
 
-#generate_tests
+
 
 end Tests.Parser

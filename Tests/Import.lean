@@ -42,6 +42,6 @@ test "TestMessage roundtrip" := do
     decoded.active ≡ testMessage.active
   | .error _ => ensure false "Decode failed"
 
-#generate_tests
+
 
 end Tests.Import
